@@ -2,7 +2,7 @@ import { removeBackground } from '@imgly/background-removal';
 
 type BgRemovalMessage =
   | { type: 'init' }
-  | { type: 'remove'; bitmap: ImageBitmap }
+  | { type: 'remove'; imageData: Blob }
   | { type: 'terminate' };
 
 type BgRemovalResponse =
@@ -23,9 +23,9 @@ self.onmessage = async (event: MessageEvent<BgRemovalMessage>) => {
   }
 
   if (type === 'remove') {
-    const { bitmap } = event.data;
+    const { imageData } = event.data;
     try {
-      const result = await removeBackground(bitmap, {
+      const result = await removeBackground(imageData, {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         progress: (name: string, loaded: number, total: number) => {
           const progress = total > 0 ? loaded / total : 0;

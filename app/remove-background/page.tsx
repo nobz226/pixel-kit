@@ -133,8 +133,19 @@ export default function RemoveBackgroundPage() {
 
     setWorkerState({ type: 'processing', progress: 0 });
 
-    // Transfer ImageBitmap directly to worker (avoids blob conversion issues)
-    workerRef.current.postMessage({ type: 'remove', bitmap }, [bitmap]);
+    // Convert ImageBitmap to Blob for the worker (removeBackground expects Blob/File)
+    try {
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to get canvas context');
+      ctx.drawImage(bitmap, 0, 0);
+      const blob = await canvas.convertToBlob({ type: 'image/png' });
+
+      // Transfer Blob to worker
+      workerRef.current.postMessage({ type: 'remove', imageData: blob });
+    } catch (err) {
+      setWorkerState({ type: 'error', error: err instanceof Error ? err.message : 'Failed to prepare image' });
+    }
   }, [bitmaps, currentIndex]);
 
   const handleDownload = useCallback(async () => {
