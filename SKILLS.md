@@ -1,6 +1,6 @@
 # SKILLS.md
 
-Project-specific conventions, patterns, and standing checklists for whoever (human or agent) is implementing features in this repo. This is a companion to `AGENT.md` (which covers agent operating rules) and `DEV_PLAN.md` (which covers what to build and when). This file covers *how* to build it well, based on patterns that matter specifically for a client-side image-processing app.
+Project-specific conventions, patterns, and standing checklists for whoever (human or agent) is implementing features in this repo. This is a companion to `AGENT.md` (which covers agent operating rules) and `DEV_PLAN.md` (which covers what to build and when). This file covers _how_ to build it well, based on patterns that matter specifically for a client-side image-processing app.
 
 ---
 
@@ -11,7 +11,7 @@ Every tool in `lib/tools/` should implement the same shape, so tools compose and
 ```ts
 interface ImageTool {
   name: string;
-  accepts: string[];              // MIME types this tool can take as input
+  accepts: string[]; // MIME types this tool can take as input
   run(input: ImageBitmap, opts: Record<string, unknown>): Promise<Blob>;
 }
 ```
@@ -43,11 +43,13 @@ Copy this list and actually check off each item when a tool is implemented — d
 ## Model-backed tools — specific notes
 
 ### Background removal (`@imgly/background-removal`)
+
 - First run downloads model weights — always show real progress, never a bare spinner with no feedback for multi-second waits.
 - Known weak points to test explicitly and communicate honestly in the UI if hit: logos with internal negative space, low-contrast subject/background pairs, non-person subjects if the model is people-tuned.
 - Verify caching actually works across page reloads — don't assume it does without checking network tab on a second run.
 
 ### Upscaling (`UpscalerJS`)
+
 - Different bundled models trade off speed vs. quality — don't default to the "best" model without testing actual in-browser latency; some are explicitly noted as better suited to server/GPU environments.
 - Photographic images, screenshots, pixel art, and illustration/anime images can behave very differently under the same model — if quality is inconsistent across categories, surface that as a model choice rather than a bug to silently work around.
 - Confirm large-image handling (patch-based processing) with a real large test image, not just small samples.

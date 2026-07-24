@@ -31,7 +31,7 @@ A free, no-account, no-payment, fully client-side image editing toolkit (resize,
 - Functional React components with hooks; no class components.
 - Tailwind for styling; avoid inline style objects except for truly dynamic values (e.g. a live crop-box position).
 - Prefer explicit, narrow types over broad ones — e.g. a union of supported MIME type strings rather than `string`.
-- Comment *why*, not *what*, especially around image-format/EXIF/browser-quirk workarounds — these are exactly the kind of thing that looks like a mistake to a future editor (human or agent) unless the reasoning is written down.
+- Comment _why_, not _what_, especially around image-format/EXIF/browser-quirk workarounds — these are exactly the kind of thing that looks like a mistake to a future editor (human or agent) unless the reasoning is written down.
 
 ## Testing expectations
 
@@ -42,6 +42,7 @@ A free, no-account, no-payment, fully client-side image editing toolkit (resize,
 ## What "done" means for a task
 
 A task is not done until:
+
 1. It matches the acceptance criteria listed for its phase in `DEV_PLAN.md`.
 2. It passes lint, build, and tests.
 3. It has been checked against the relevant items in the `SKILLS.md` QA checklist.

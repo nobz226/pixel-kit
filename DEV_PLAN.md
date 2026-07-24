@@ -11,6 +11,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Goal:** a running, empty Next.js app with the right tooling in place, so every later phase starts from a clean baseline.
 
 **Tasks:**
+
 1. Scaffold with `npx create-next-app@latest` — TypeScript, App Router, Tailwind CSS, ESLint all enabled.
 2. Set up Prettier + ESLint config consistent with each other (avoid conflicting rules).
 3. Add `SKILLS.md`, `AGENT.md`, `DEV_PLAN.md`, `README.md` at repo root (this file being one of them).
@@ -20,6 +21,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 7. Build a bare-bones landing page (`app/page.tsx`) that just lists the planned tools as cards/links, even if the linked pages are empty stubs.
 
 **Acceptance criteria:**
+
 - `npm run dev` runs cleanly with no console errors.
 - `npm run build` succeeds.
 - CI passes on a fresh push.
@@ -73,6 +75,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
    - Package results as a ZIP for download (a lightweight client-side zip library, evaluate size before adding)
 
 **Acceptance criteria:**
+
 - All four tools work correctly on: normal JPEGs/PNGs, very large images (20MP+), very small images (under 50px), transparent PNGs, images with EXIF rotation data, and at least one deliberately corrupted file (should show a clear error, not crash).
 - Batch mode works for at least 10 files without freezing the tab.
 - No memory leaks across repeated operations (check via browser dev tools memory profiler after processing ~20 images in a row).
@@ -80,6 +83,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Time estimate:** 2–3 days.
 
 **Known pitfalls:**
+
 - EXIF orientation bugs are extremely common and easy to miss until tested with real phone photos.
 - `canvas.toBlob` is async and quality behavior differs slightly across browsers — test in more than one browser before considering this phase done.
 
@@ -92,6 +96,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Tasks:**
 
 1. **Install dependencies**
+
    ```bash
    npm install @imgly/background-removal onnxruntime-web
    ```
@@ -118,6 +123,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
    - Non-person subjects (this matters if the underlying model is tuned mainly for people — verify against product shots, animals, objects)
 
 **Acceptance criteria:**
+
 - Works offline after first model download (verify with browser dev tools network throttling / offline mode).
 - Processing time on a mid-range laptop is reasonable (target: a few seconds for a typical photo).
 - Clear, honest UI messaging when results are likely to be imperfect (e.g., complex edge cases) rather than presenting a flawed cutout as if it were perfect.
@@ -126,6 +132,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Time estimate:** 1–2 days.
 
 **Known pitfalls:**
+
 - Large model download on first visit — make sure this doesn't block the rest of the app from being usable, and that it's cached correctly across sessions.
 - `SharedArrayBuffer` availability affects performance and requires specific COOP/COEP headers if self-hosting assets — verify header configuration on your actual deployment target, not just localhost.
 
@@ -138,9 +145,11 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Tasks:**
 
 1. **Install dependencies**
+
    ```bash
    npm install upscaler @tensorflow/tfjs
    ```
+
    (choose the TF.js backend appropriate for target environment — plain `@tensorflow/tfjs` for browser WebGL/WebGPU backends)
 
 2. **Worker wrapper** (`lib/workers/upscale.worker.ts`)
@@ -160,6 +169,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
    - Anime/illustration-style images if a relevant model is bundled
 
 **Acceptance criteria:**
+
 - 2x and 4x both produce visibly sharper output than naive canvas resize on the same input, side by side.
 - No tab freezing/crashing on large inputs — worst case is a clear "image too large, try a smaller one" message.
 - Chosen default model documented along with why it was chosen over the alternatives tested.
@@ -167,6 +177,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Time estimate:** 2–3 days.
 
 **Known pitfalls:**
+
 - Some bundled models are explicitly noted as better suited to Node/GPU environments with significant latency in-browser — verify actual in-browser performance before defaulting to the "best quality" model if it makes the tool feel sluggish.
 
 ---
@@ -196,6 +207,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
    - Confirm graceful degradation messaging on unsupported browsers/devices rather than a silent failure
 
 **Acceptance criteria:**
+
 - Lighthouse scores meet target on all tool pages.
 - Full keyboard-only walkthrough of every tool succeeds.
 - No unhandled errors across the manual cross-browser pass.
@@ -209,6 +221,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 **Goal:** live, public, static deployment with no backend.
 
 **Tasks:**
+
 1. Connect repo to Vercel or Netlify.
 2. Configure build command / output directory (standard Next.js static/SSG output where possible — confirm which routes need to be static vs. server-rendered, though this app should need almost none of the latter).
 3. Verify custom headers if self-hosting model assets (COOP/COEP for `SharedArrayBuffer`, correct CORS/cache headers for model weight files).
@@ -216,6 +229,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 5. Final smoke test on the live deployed URL — not just `localhost` — for every tool.
 
 **Acceptance criteria:**
+
 - Public URL live and working for all tools.
 - First-load model download experience verified on the actual production CDN, not just local dev.
 - No secrets, API keys, or backend services required — deployment truly has zero ongoing cost drivers tied to usage.
@@ -227,6 +241,7 @@ Work phases in order. Do not start a phase until the previous phase's acceptance
 ## Post-v1: decide, don't assume
 
 Once v1 is live and has real usage:
+
 - Look at real device/browser telemetry (aggregate only, no image data) to see if client-side performance is actually a problem for a meaningful share of users.
 - Only then evaluate whether a server-side fallback (Phase "3.5"/v2, previously scoped with Replicate or self-hosted GPU inference) is worth the added complexity, cost, and rate-limiting work.
 - Resist adding a backend pre-emptively — the entire value proposition of v1 is that it doesn't need one.
