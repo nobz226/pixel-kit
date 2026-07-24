@@ -22,6 +22,7 @@ export default function RemoveBackgroundPage() {
   const [previews, setPreviews] = useState<Map<number, string>>(new Map());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [workerState, setWorkerState] = useState<WorkerState>({ type: 'idle' });
+  const [isClient, setIsClient] = useState(false);
   const [results, setResults] = useState<Array<{ blob: Blob; filename: string; originalName: string }>>([]);
   const [originalDimensions, setOriginalDimensions] = useState<{ width: number; height: number } | null>(null);
   const [originalSize, setOriginalSize] = useState(0);
@@ -88,6 +89,10 @@ export default function RemoveBackgroundPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setTimeout(() => setIsClient(true), 0);
+  }, []);
+
   const handleFiles = useCallback(async (newFiles: File[]) => {
     const validFiles = newFiles.filter((f) => f.size <= MAX_FILE_SIZE);
     if (validFiles.length !== newFiles.length) {
@@ -128,7 +133,8 @@ export default function RemoveBackgroundPage() {
 
     setWorkerState({ type: 'processing', progress: 0 });
 
-    workerRef.current.postMessage({ type: 'remove', imageBitmap: bitmap }, [bitmap]);
+    // Transfer ImageBitmap directly to worker (avoids blob conversion issues)
+    workerRef.current.postMessage({ type: 'remove', bitmap }, [bitmap]);
   }, [bitmaps, currentIndex]);
 
   const handleDownload = useCallback(async () => {
@@ -341,20 +347,24 @@ export default function RemoveBackgroundPage() {
               )}
 
               <div className="mt-6 flex gap-3">
-                <button
-                  onClick={handleProcess}
-                  disabled={workerState.type === 'processing' || files.length === 0 || workerState.type !== 'ready'}
-                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {workerState.type === 'processing' ? 'Removing Background...' : 'Remove Background'}
-                </button>
-                {workerState.type === 'done' && (
-                  <button
-                    onClick={handleDownload}
-                    className="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    Download PNG
-                  </button>
+                {isClient && (
+                  <>
+                    <button
+                      onClick={handleProcess}
+                      disabled={workerState.type === 'processing' || files.length === 0 || workerState.type !== 'ready'}
+                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {workerState.type === 'processing' ? 'Removing Background...' : 'Remove Background'}
+                    </button>
+                    {workerState.type === 'done' && (
+                      <button
+                        onClick={handleDownload}
+                        className="px-4 py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      >
+                        Download PNG
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
