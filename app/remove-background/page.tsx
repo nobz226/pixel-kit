@@ -149,10 +149,11 @@ export default function RemoveBackgroundPage() {
   }, [bitmaps, currentIndex]);
 
   const handleDownload = useCallback(async () => {
-    if (workerState.type !== 'done' || !workerState.result) return;
+    if (workerState.type !== 'done' || !workerState.resultBlobUrl) return;
 
     try {
-      const blob = await backgroundRemovalTool.run(workerState.result, {});
+      const response = await fetch(workerState.resultBlobUrl);
+      const blob = await response.blob();
       const filename = getOutputFilename(files[currentIndex].name, 'png', 'no-bg');
       downloadBlob(blob, filename);
     } catch (err) {
