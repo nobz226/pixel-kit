@@ -47,15 +47,15 @@ Most "free" online image tools are free in name only: they gate full resolution,
 
 ### v1 (client-side only)
 
-| Tool | Description | Underlying tech |
-|---|---|---|
-| Resize | Resize to exact dimensions or percentage, with/without aspect ratio lock | Canvas API |
-| Crop | Freeform and fixed-ratio cropping (1:1, 4:3, 16:9, etc.) | Canvas API |
-| Format conversion | JPEG ↔ PNG ↔ WebP ↔ AVIF (where supported) | Canvas API / `createImageBitmap` |
-| Compression | Adjustable quality/size tradeoff slider | Canvas `toBlob` quality param |
-| Background removal | One-click subject/background segmentation, transparent PNG output | `@imgly/background-removal` (ONNX + WASM/WebGPU) |
-| Upscaling | 2x / 4x AI super-resolution | `UpscalerJS` (TensorFlow.js) |
-| Batch processing | Apply one operation to multiple images, download as ZIP | Web Workers + client-side ZIP packing |
+| Tool               | Description                                                              | Underlying tech                                  |
+| ------------------ | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| Resize             | Resize to exact dimensions or percentage, with/without aspect ratio lock | Canvas API                                       |
+| Crop               | Freeform and fixed-ratio cropping (1:1, 4:3, 16:9, etc.)                 | Canvas API                                       |
+| Format conversion  | JPEG ↔ PNG ↔ WebP ↔ AVIF (where supported)                               | Canvas API / `createImageBitmap`                 |
+| Compression        | Adjustable quality/size tradeoff slider                                  | Canvas `toBlob` quality param                    |
+| Background removal | One-click subject/background segmentation, transparent PNG output        | `@imgly/background-removal` (ONNX + WASM/WebGPU) |
+| Upscaling          | 2x / 4x AI super-resolution                                              | `UpscalerJS` (TensorFlow.js)                     |
+| Batch processing   | Apply one operation to multiple images, download as ZIP                  | Web Workers + client-side ZIP packing            |
 
 ### Possibly v2+ (not committed, evaluate based on real usage)
 
@@ -104,7 +104,7 @@ Every tool is implemented as an independent module with the same basic contract:
 ```ts
 interface ImageTool {
   name: string;
-  accepts: string[];          // supported input MIME types
+  accepts: string[]; // supported input MIME types
   run(input: ImageBitmap, opts: ToolOptions): Promise<Blob>;
 }
 ```
@@ -173,13 +173,13 @@ pixelkit/
 
 ## Available scripts
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Start local dev server |
-| `npm run build` | Production build |
+| Command         | Purpose                |
+| --------------- | ---------------------- |
+| `npm run dev`   | Start local dev server |
+| `npm run build` | Production build       |
 | `npm run start` | Serve production build |
-| `npm run lint` | Run linter |
-| `npm run test` | Run test suite |
+| `npm run lint`  | Run linter             |
+| `npm run test`  | Run test suite         |
 
 ## Browser support
 
