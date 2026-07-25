@@ -58,6 +58,11 @@ export default function UpscalePage() {
   const workerRef = useRef<Worker | null>(null);
   const resultBlobUrlRef = useRef<string | null>(null);
 
+  const [sliderPosition, setSliderPosition] = useState(50);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   useEffect(() => {
     let worker: Worker;
     let initTimeout: NodeJS.Timeout;
@@ -222,6 +227,14 @@ export default function UpscalePage() {
     setOriginalDimensions(null);
     setWorkerState({ type: 'idle' });
     setCurrentIndex(0);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
   }, []);
 
   useEffect(() => {
@@ -411,23 +424,81 @@ export default function UpscalePage() {
                 </div>
               )}
 
-              <div className="relative mx-auto mb-6 aspect-square max-w-md overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
+              <div
+                ref={containerRef}
+                className="relative mx-auto mb-6 max-w-md overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 select-none"
+                style={{ aspectRatio: originalDimensions ? `${originalDimensions.width}/${originalDimensions.height}` : '1', touchAction: 'none' }}
+                onMouseDown={(e) => {
+                  if (!containerRef.current || workerState.type !== 'done') return;
+                  isDragging.current = true;
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  setSliderPosition(Math.max(0, Math.min(100, x)));
+                }}
+                onMouseMove={(e) => {
+                  if (!isDragging.current || !containerRef.current) return;
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  setSliderPosition(Math.max(0, Math.min(100, x)));
+                }}
+                onMouseUp={() => { isDragging.current = false; }}
+                onMouseLeave={() => { isDragging.current = false; }}
+                onTouchStart={(e) => {
+                  if (!containerRef.current || workerState.type !== 'done') return;
+                  isDragging.current = true;
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                  setSliderPosition(Math.max(0, Math.min(100, x)));
+                }}
+                onTouchMove={(e) => {
+                  if (!isDragging.current || !containerRef.current) return;
+                  const rect = containerRef.current.getBoundingClientRect();
+                  const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                  setSliderPosition(Math.max(0, Math.min(100, x)));
+                }}
+                onTouchEnd={() => { isDragging.current = false; }}
+              >
                 {currentPreview && (
-                  <>
+                  <div className="relative h-full w-full">
                     <img
                       src={currentPreview}
                       alt={currentFile?.name || 'Preview'}
-                      className="absolute inset-0 h-full w-full object-contain"
-                      style={{ opacity: workerState.type === 'done' ? 0.3 : 1 }}
+                      className="pointer-events-none block h-full w-full"
+                      style={{ objectFit: 'contain' }}
                     />
                     {workerState.type === 'done' && workerState.resultBlobUrl && (
                       <img
                         src={workerState.resultBlobUrl}
                         alt="Upscaled result"
-                        className="absolute inset-0 h-full w-full object-contain"
+                        className="pointer-events-none absolute inset-0 block h-full w-full"
+                        style={{
+                          objectFit: 'contain',
+                          clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
+                        }}
                       />
                     )}
-                  </>
+                    <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                      Original
+                    </div>
+                    {workerState.type === 'done' && workerState.resultBlobUrl && (
+                      <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                        Upscaled
+                      </div>
+                    )}
+                    {workerState.type === 'done' && (
+                      <div
+                        className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
+                        style={{ left: `${sliderPosition}%` }}
+                      >
+                        <div className="absolute -left-3 -translate-y-1/2 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-600" fill="currentColor">
+                            <path d="M8 5l-5 7 5 7" />
+                            <path d="M16 5l5 7-5 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
                 {!currentPreview && (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-400">
@@ -453,12 +524,20 @@ export default function UpscalePage() {
                         : `Upscale ${scale}×`}
                     </button>
                     {workerState.type === 'done' && (
-                      <button
-                        onClick={handleDownload}
-                        className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                      >
-                        Download PNG
-                      </button>
+                      <>
+                        <button
+                          onClick={handleDownload}
+                          className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                        >
+                          Download PNG
+                        </button>
+                        <button
+                          onClick={() => setIsFullscreen(true)}
+                          className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                        >
+                          Fullscreen
+                        </button>
+                      </>
                     )}
                   </>
                 )}
@@ -503,6 +582,98 @@ export default function UpscalePage() {
           </div>
         </div>
       </div>
+
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+          <div className="flex items-center justify-between px-4 py-3">
+            <span className="text-sm text-gray-400">
+              {currentFile?.name} — Drag to compare
+            </span>
+            <button
+              onClick={() => setIsFullscreen(false)}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex flex-1 items-center justify-center p-4">
+            <div
+              className="relative h-full w-full max-w-full max-h-full overflow-hidden select-none"
+              style={{ aspectRatio: originalDimensions ? `${originalDimensions.width}/${originalDimensions.height}` : '1', maxHeight: '100%', touchAction: 'none' }}
+              onMouseDown={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                setSliderPosition(Math.max(0, Math.min(100, x)));
+                isDragging.current = true;
+              }}
+              onMouseMove={(e) => {
+                if (!isDragging.current) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.clientX - rect.left) / rect.width) * 100;
+                setSliderPosition(Math.max(0, Math.min(100, x)));
+              }}
+              onMouseUp={() => { isDragging.current = false; }}
+              onMouseLeave={() => { isDragging.current = false; }}
+              onTouchStart={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                setSliderPosition(Math.max(0, Math.min(100, x)));
+                isDragging.current = true;
+              }}
+              onTouchMove={(e) => {
+                if (!isDragging.current) return;
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                setSliderPosition(Math.max(0, Math.min(100, x)));
+              }}
+              onTouchEnd={() => { isDragging.current = false; }}
+            >
+              {currentPreview && (
+                <>
+                  <img
+                    src={currentPreview}
+                    alt="Original"
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                    style={{ objectFit: 'contain' }}
+                  />
+                  {workerState.resultBlobUrl && (
+                    <img
+                      src={workerState.resultBlobUrl}
+                      alt="Upscaled"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      style={{
+                        objectFit: 'contain',
+                        clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
+                      }}
+                    />
+                  )}
+                  <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                    Original
+                  </div>
+                  {workerState.resultBlobUrl && (
+                    <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                      Upscaled
+                    </div>
+                  )}
+                  <div
+                    className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
+                    style={{ left: `${sliderPosition}%` }}
+                  >
+                    <div className="absolute -left-3 -translate-y-1/2 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md">
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-600" fill="currentColor">
+                        <path d="M8 5l-5 7 5 7" />
+                        <path d="M16 5l5 7-5 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
