@@ -1,9 +1,7 @@
 import { removeBackground } from '@imgly/background-removal';
 
 type BgRemovalMessage =
-  | { type: 'init' }
-  | { type: 'remove'; imageData: Blob }
-  | { type: 'terminate' };
+  { type: 'init' } | { type: 'remove'; imageData: Blob } | { type: 'terminate' };
 
 type BgRemovalResponse =
   | { type: 'ready' }
