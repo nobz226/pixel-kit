@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useRef, useState, DragEvent, ChangeEvent, ClipboardEvent } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/design-system/utils';
 
 export interface DropzoneProps {
   onFiles: (files: File[]) => void;
@@ -173,15 +175,17 @@ export function Dropzone({
   const acceptAttr = accept.join(',');
 
   return (
-    <div
+    <motion.div
       ref={dropzoneRef}
-      className={`relative rounded-xl border-2 transition-all duration-200 ${
+      className={cn(
+        'relative rounded-xl border-2 border-dashed transition-all duration-200',
         disabled
-          ? 'cursor-not-allowed border-gray-200 opacity-50 dark:border-gray-700'
+          ? 'cursor-not-allowed border-white/5 opacity-50'
           : isDragging
-            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-            : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'
-      } ${className}`}
+            ? 'border-primary bg-primary/10'
+            : 'border-white/10 hover:border-primary/40 hover:bg-white/[0.02]',
+        className
+      )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -191,6 +195,8 @@ export function Dropzone({
       role="button"
       aria-label="Dropzone for image upload"
       aria-describedby={error ? `${id}-error` : undefined}
+      whileHover={!disabled && !isDragging ? { scale: 1.005 } : undefined}
+      whileTap={!disabled ? { scale: 0.995 } : undefined}
     >
       <input
         ref={fileInputRef}
@@ -199,54 +205,66 @@ export function Dropzone({
         accept={acceptAttr}
         multiple={multiple}
         onChange={handleFileChange}
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
         disabled={disabled}
         aria-hidden="true"
       />
 
       <div className="flex flex-col items-center justify-center p-8 text-center">
-        <svg
-          className="mb-4 h-12 w-12 text-gray-400 dark:text-gray-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
+        <motion.div
+          className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10"
+          animate={isDragging ? { scale: 1.1, borderColor: 'rgba(0,212,170,0.3)' } : { scale: 1, borderColor: 'rgba(255,255,255,0.1)' }}
+          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-          />
-        </svg>
-        <p className="text-lg font-medium text-gray-900 dark:text-white">
+          <svg
+            className={cn('h-6 w-6 transition-colors', isDragging ? 'text-primary' : 'text-zinc-400')}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+            />
+          </svg>
+        </motion.div>
+        <p className={cn('text-sm font-medium transition-colors', isDragging ? 'text-primary' : 'text-zinc-300')}>
           {multiple
             ? 'Drag & drop images here, or click to browse'
             : 'Drag & drop an image here, or click to browse'}
         </p>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mt-1 text-xs text-zinc-500">
           Supports: {accept.map((a) => a.replace('image/', '')).join(', ')} • Max{' '}
           {maxFileSize / 1024 / 1024}MB per file
           {multiple ? ` • Up to ${maxFiles} files` : ''}
         </p>
-        <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
+        <p className="mt-2 text-[11px] text-zinc-600">
           Or press{' '}
-          <kbd className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <kbd className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-zinc-400 border border-white/10">
             Ctrl/Cmd + V
           </kbd>{' '}
           to paste from clipboard
         </p>
       </div>
 
-      {error && (
-        <div
-          id={`${id}-error`}
-          className="absolute right-0 bottom-full left-0 mb-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-          role="alert"
-        >
-          {error}
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            id={`${id}-error`}
+            className="absolute right-0 bottom-full left-0 mb-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300 backdrop-blur-xl"
+            role="alert"
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

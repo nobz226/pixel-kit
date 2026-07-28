@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { Dropzone } from '@/components/ui/Dropzone';
 import {
   loadImageWithExif,
@@ -11,6 +12,10 @@ import {
 } from '@/lib/canvas-utils';
 import { cropTool, calculateCropBounds, ASPECT_RATIOS } from '@/lib/tools/crop';
 import { CropOptions } from '@/lib/tools/types';
+import { PageBackground } from '@/components/background/BackgroundEffects';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Panel, PanelHeader } from '@/components/ui/Panel';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
@@ -361,292 +366,309 @@ export default function CropPage() {
   const currentFile = files[currentIndex];
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-gray-900 dark:text-white">
-            PixelKit
-          </Link>
-          <Link
-            href="/"
-            className="text-sm text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            ← All Tools
-          </Link>
-        </header>
+    <PageBackground variant="tool">
+      <motion.main
+        className="min-h-screen px-4 py-8"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-8 flex items-center justify-between">
+            <Link href="/" className="text-2xl font-bold text-white">
+              PixelKit
+            </Link>
+            <Link
+              href="/"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
+            >
+              ← All Tools
+            </Link>
+          </header>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Upload</h2>
-              <Dropzone
-                onFiles={handleFiles}
-                multiple
-                maxFiles={10}
-                maxFileSize={MAX_FILE_SIZE}
-                id="crop-dropzone"
-                disabled={processing}
-              />
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-1">
+              <Panel variant="elevated" padding="md" className="sticky top-24">
+                <PanelHeader title="Upload" />
+                <Dropzone
+                  onFiles={handleFiles}
+                  multiple
+                  maxFiles={10}
+                  maxFileSize={MAX_FILE_SIZE}
+                  id="crop-dropzone"
+                  disabled={processing}
+                />
 
-              {files.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    Selected Files ({files.length})
-                  </h3>
-                  <ul className="max-h-40 space-y-1 overflow-y-auto">
-                    {files.map((file, index) => (
-                      <li
-                        key={index}
-                        className={`flex items-center justify-between rounded px-2 py-1 text-sm ${
-                          index === currentIndex
-                            ? 'bg-blue-50 dark:bg-blue-900/30'
-                            : 'bg-gray-50 dark:bg-gray-700'
-                        } cursor-pointer`}
-                        onClick={() => setCurrentIndex(index)}
-                      >
-                        <span className="mr-2 truncate">{file.name}</span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {formatFileSize(file.size)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={handleClear}
-                    className="w-full text-sm text-red-600 hover:text-red-700 dark:hover:text-red-400"
-                    disabled={processing}
-                  >
-                    Clear All
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Crop Area</h2>
-                {files.length > 1 && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                    <span>
-                      Image {currentIndex + 1} of {files.length}
-                    </span>
-                    {currentIndex > 0 && (
-                      <button
-                        onClick={() => setCurrentIndex(currentIndex - 1)}
-                        className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        ← Prev
-                      </button>
-                    )}
-                    {currentIndex < files.length - 1 && (
-                      <button
-                        onClick={() => setCurrentIndex(currentIndex + 1)}
-                        className="rounded px-2 py-1 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                      >
-                        Next →
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-4 flex flex-wrap gap-2">
-                {ASPECT_RATIOS.map((ratio) => (
-                  <button
-                    key={ratio.label}
-                    onClick={() => handleRatioChange(ratio.value)}
-                    className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                      selectedRatio === ratio.value
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {ratio.label}
-                  </button>
-                ))}
-              </div>
-
-              <div
-                ref={containerRef}
-                className="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
-                onMouseDown={handleMouseDown}
-              >
-                {currentPreview && currentBitmap && (
-                  <>
-                    <img
-                      ref={imageRef}
-                      src={currentPreview}
-                      alt={currentFile?.name || 'Crop preview'}
-                      className="block"
-                      style={{
-                        width: currentBitmap.width * previewScale,
-                        height: currentBitmap.height * previewScale,
-                      }}
-                    />
-
-                    <div
-                      className="pointer-events-none absolute border-2 border-blue-500 bg-blue-500/10"
-                      style={{
-                        left: cropArea?.x ? cropArea.x * previewScale : 0,
-                        top: cropArea?.y ? cropArea.y * previewScale : 0,
-                        width: cropArea?.width ? cropArea.width * previewScale : 0,
-                        height: cropArea?.height ? cropArea.height * previewScale : 0,
-                      }}
-                    >
-                      {['nw', 'ne', 'sw', 'se'].map((corner) => (
-                        <div
-                          key={corner}
-                          className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 border-2 border-white bg-blue-500"
-                          style={{
-                            left: corner.includes('e') ? '100%' : '0',
-                            top: corner.includes('s') ? '100%' : '0',
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    {(cropArea?.x !== 0 || cropArea?.y !== 0) && (
-                      <div
-                        className="pointer-events-none absolute inset-0 bg-black/30"
-                        style={{
-                          clipPath: cropArea
-                            ? `polygon(
-                                0 0,
-                                100% 0,
-                                100% 100%,
-                                0 100%,
-                                0 0,
-                                ${cropArea.x * previewScale}px ${cropArea.y * previewScale}px,
-                                ${(cropArea.x + cropArea.width) * previewScale}px ${cropArea.y * previewScale}px,
-                                ${(cropArea.x + cropArea.width) * previewScale}px ${(cropArea.y + cropArea.height) * previewScale}px,
-                                ${cropArea.x * previewScale}px ${(cropArea.y + cropArea.height) * previewScale}px,
-                                ${cropArea.x * previewScale}px ${cropArea.y * previewScale}px
-                              )`
-                            : 'none',
-                        }}
-                      />
-                    )}
-                  </>
-                )}
-              </div>
-
-              {cropArea && originalDimensions && (
-                <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <label className="mb-1 block text-gray-500 dark:text-gray-400">X</label>
-                    <input
-                      type="number"
-                      value={cropArea.x}
-                      onChange={(e) => handleNumericChange('x', e.target.valueAsNumber)}
-                      min={0}
-                      max={originalDimensions.width - (cropArea.width || 1)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-gray-500 dark:text-gray-400">Y</label>
-                    <input
-                      type="number"
-                      value={cropArea.y}
-                      onChange={(e) => handleNumericChange('y', e.target.valueAsNumber)}
-                      min={0}
-                      max={originalDimensions.height - (cropArea.height || 1)}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-gray-500 dark:text-gray-400">Width</label>
-                    <input
-                      type="number"
-                      value={cropArea.width}
-                      onChange={(e) => handleNumericChange('width', e.target.valueAsNumber)}
-                      min={1}
-                      max={originalDimensions.width}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-gray-500 dark:text-gray-400">Height</label>
-                    <input
-                      type="number"
-                      value={cropArea.height}
-                      onChange={(e) => handleNumericChange('height', e.target.valueAsNumber)}
-                      min={1}
-                      max={originalDimensions.height}
-                      className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div
-                  className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                  role="alert"
-                >
-                  {error}
-                </div>
-              )}
-
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={handleProcess}
-                  disabled={processing || files.length === 0 || !cropArea}
-                  className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {processing ? 'Processing...' : 'Crop Images'}
-                </button>
-                {results.length > 1 && (
-                  <button
-                    onClick={handleDownloadAll}
-                    className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                  >
-                    Download All
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {results.length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                  Results ({results.length})
-                </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {results.map((result, index) => (
-                    <div
-                      key={index}
-                      className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700"
-                    >
-                      <img
-                        src={URL.createObjectURL(result.blob)}
-                        alt={`Cropped ${result.originalName}`}
-                        className="h-48 w-full bg-gray-100 object-contain dark:bg-gray-700"
-                      />
-                      <div className="space-y-2 p-3">
-                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                          {result.filename}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatFileSize(result.blob.size)}
-                        </p>
-                        <button
-                          onClick={() => handleDownload(result.blob, result.filename)}
-                          className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition-colors hover:bg-blue-700"
+                {files.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h3 className="text-sm font-medium text-zinc-300">
+                      Selected Files ({files.length})
+                    </h3>
+                    <ul className="max-h-40 space-y-1 overflow-y-auto">
+                      {files.map((file, index) => (
+                        <li
+                          key={index}
+                          className={`flex cursor-pointer items-center justify-between rounded px-2 py-1 text-sm ${
+                            index === currentIndex
+                              ? 'bg-primary/10 text-zinc-200'
+                              : 'bg-white/[0.03] text-zinc-300'
+                          }`}
+                          onClick={() => setCurrentIndex(index)}
                         >
-                          Download
-                        </button>
+                          <span className="mr-2 truncate">{file.name}</span>
+                          <span className="text-zinc-500">
+                            {formatFileSize(file.size)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      onClick={handleClear}
+                      variant="ghost"
+                      size="sm"
+                      fullWidth
+                      disabled={processing}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                )}
+              </Panel>
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <Panel variant="elevated" padding="lg">
+                <PanelHeader
+                  title="Crop Area"
+                  action={
+                    files.length > 1 && (
+                      <div className="flex items-center gap-2 text-sm text-zinc-400">
+                        <span>
+                          Image {currentIndex + 1} of {files.length}
+                        </span>
+                        {currentIndex > 0 && (
+                          <Button
+                            onClick={() => setCurrentIndex(currentIndex - 1)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            ← Prev
+                          </Button>
+                        )}
+                        {currentIndex < files.length - 1 && (
+                          <Button
+                            onClick={() => setCurrentIndex(currentIndex + 1)}
+                            variant="ghost"
+                            size="sm"
+                          >
+                            Next →
+                          </Button>
+                        )}
                       </div>
-                    </div>
+                    )
+                  }
+                />
+
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {ASPECT_RATIOS.map((ratio) => (
+                    <button
+                      key={ratio.label}
+                      onClick={() => handleRatioChange(ratio.value)}
+                      className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                        selectedRatio === ratio.value
+                          ? 'border-primary/40 bg-primary/20 text-primary'
+                          : 'border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                      }`}
+                    >
+                      {ratio.label}
+                    </button>
                   ))}
                 </div>
-              </div>
-            )}
+
+                <div
+                  ref={containerRef}
+                  className="relative overflow-hidden rounded-lg bg-black/50"
+                  onMouseDown={handleMouseDown}
+                >
+                  {currentPreview && currentBitmap && (
+                    <>
+                      <img
+                        ref={imageRef}
+                        src={currentPreview}
+                        alt={currentFile?.name || 'Crop preview'}
+                        className="block"
+                        style={{
+                          width: currentBitmap.width * previewScale,
+                          height: currentBitmap.height * previewScale,
+                        }}
+                      />
+
+                      <div
+                        className="pointer-events-none absolute border-2 border-primary bg-primary/10"
+                        style={{
+                          left: cropArea?.x ? cropArea.x * previewScale : 0,
+                          top: cropArea?.y ? cropArea.y * previewScale : 0,
+                          width: cropArea?.width ? cropArea.width * previewScale : 0,
+                          height: cropArea?.height ? cropArea.height * previewScale : 0,
+                        }}
+                      >
+                        {['nw', 'ne', 'sw', 'se'].map((corner) => (
+                          <div
+                            key={corner}
+                            className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 border-2 border-white bg-primary"
+                            style={{
+                              left: corner.includes('e') ? '100%' : '0',
+                              top: corner.includes('s') ? '100%' : '0',
+                            }}
+                          />
+                        ))}
+                      </div>
+
+                      {(cropArea?.x !== 0 || cropArea?.y !== 0) && (
+                        <div
+                          className="pointer-events-none absolute inset-0 bg-black/30"
+                          style={{
+                            clipPath: cropArea
+                              ? `polygon(
+                                  0 0,
+                                  100% 0,
+                                  100% 100%,
+                                  0 100%,
+                                  0 0,
+                                  ${cropArea.x * previewScale}px ${cropArea.y * previewScale}px,
+                                  ${(cropArea.x + cropArea.width) * previewScale}px ${cropArea.y * previewScale}px,
+                                  ${(cropArea.x + cropArea.width) * previewScale}px ${(cropArea.y + cropArea.height) * previewScale}px,
+                                  ${cropArea.x * previewScale}px ${(cropArea.y + cropArea.height) * previewScale}px,
+                                  ${cropArea.x * previewScale}px ${cropArea.y * previewScale}px
+                                )`
+                              : 'none',
+                          }}
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {cropArea && originalDimensions && (
+                  <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-zinc-300">X</label>
+                      <Input
+                        type="number"
+                        value={cropArea.x}
+                        onChange={(e) => handleNumericChange('x', e.target.valueAsNumber)}
+                        min={0}
+                        max={originalDimensions.width - (cropArea.width || 1)}
+                        variant="glass"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-zinc-300">Y</label>
+                      <Input
+                        type="number"
+                        value={cropArea.y}
+                        onChange={(e) => handleNumericChange('y', e.target.valueAsNumber)}
+                        min={0}
+                        max={originalDimensions.height - (cropArea.height || 1)}
+                        variant="glass"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-zinc-300">Width</label>
+                      <Input
+                        type="number"
+                        value={cropArea.width}
+                        onChange={(e) => handleNumericChange('width', e.target.valueAsNumber)}
+                        min={1}
+                        max={originalDimensions.width}
+                        variant="glass"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-zinc-300">Height</label>
+                      <Input
+                        type="number"
+                        value={cropArea.height}
+                        onChange={(e) => handleNumericChange('height', e.target.valueAsNumber)}
+                        min={1}
+                        max={originalDimensions.height}
+                        variant="glass"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <div
+                    className="mt-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300"
+                    role="alert"
+                  >
+                    {error}
+                  </div>
+                )}
+
+                <div className="mt-6 flex gap-3">
+                  <Button
+                    onClick={handleProcess}
+                    disabled={processing || files.length === 0 || !cropArea}
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                  >
+                    {processing ? 'Processing...' : 'Crop Images'}
+                  </Button>
+                  {results.length > 1 && (
+                    <Button
+                      onClick={handleDownloadAll}
+                      variant="glass"
+                      size="md"
+                    >
+                      Download All
+                    </Button>
+                  )}
+                </div>
+              </Panel>
+
+              {results.length > 0 && (
+                <Panel variant="elevated" padding="lg">
+                  <PanelHeader title={`Results (${results.length})`} />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {results.map((result, index) => (
+                      <div
+                        key={index}
+                        className="overflow-hidden rounded-lg border border-white/10"
+                      >
+                        <img
+                          src={URL.createObjectURL(result.blob)}
+                          alt={`Cropped ${result.originalName}`}
+                          className="h-48 w-full bg-zinc-900/50 object-contain"
+                        />
+                        <div className="space-y-2 p-3">
+                          <p className="truncate text-sm font-medium text-white">
+                            {result.filename}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {formatFileSize(result.blob.size)}
+                          </p>
+                          <Button
+                            onClick={() => handleDownload(result.blob, result.filename)}
+                            variant="primary"
+                            size="sm"
+                            fullWidth
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      </motion.main>
+    </PageBackground>
   );
 }

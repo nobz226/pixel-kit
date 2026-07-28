@@ -2,6 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { PageBackground } from '@/components/background/BackgroundEffects';
+import { Button } from '@/components/ui/Button';
+import { Panel, PanelHeader } from '@/components/ui/Panel';
 import { Dropzone } from '@/components/ui/Dropzone';
 import {
   loadImageWithExif,
@@ -258,219 +262,439 @@ export default function UpscalePage() {
     (originalDimensions.width > maxInput.width || originalDimensions.height > maxInput.height);
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900">
-      <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex items-center justify-between">
-          <Link href="/" className="text-2xl font-bold text-gray-900 dark:text-white">
-            PixelKit
-          </Link>
-          <Link
-            href="/"
-            className="text-sm text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"
-          >
-            ← All Tools
-          </Link>
-        </header>
+    <PageBackground variant="tool">
+      <motion.main
+        className="min-h-screen px-4 py-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+      >
+        <div className="mx-auto max-w-6xl">
+          <header className="mb-8 flex items-center justify-between">
+            <Link href="/" className="text-2xl font-bold text-zinc-300">
+              PixelKit
+            </Link>
+            <Link
+              href="/"
+              className="text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+            >
+              ← All Tools
+            </Link>
+          </header>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Upload</h2>
-              <Dropzone
-                onFiles={handleFiles}
-                multiple={false}
-                maxFiles={1}
-                maxFileSize={MAX_FILE_SIZE}
-                id="upscale-dropzone"
-                disabled={workerState.type === 'processing'}
-              />
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-1">
+              <div className="sticky top-24">
+                <Panel variant="elevated" padding="md">
+                  <PanelHeader title="Upload" />
+                  <Dropzone
+                    onFiles={handleFiles}
+                    multiple={false}
+                    maxFiles={1}
+                    maxFileSize={MAX_FILE_SIZE}
+                    id="upscale-dropzone"
+                    disabled={workerState.type === 'processing'}
+                  />
 
-              {files.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h3 className="font-medium text-gray-900 dark:text-white">
-                    Selected File
-                  </h3>
-                  <ul className="max-h-40 space-y-1 overflow-y-auto">
-                    {files.map((file, index) => (
-                      <li
-                        key={index}
-                        className={`flex items-center justify-between rounded px-2 py-1 text-sm ${
-                          index === currentIndex
-                            ? 'bg-blue-50 dark:bg-blue-900/30'
-                            : 'bg-gray-50 dark:bg-gray-700'
-                        } cursor-pointer`}
-                        onClick={() => {
-                          setCurrentIndex(index);
-                          if (workerState.type === 'done') {
-                            setWorkerState({ type: 'ready' });
-                          }
-                        }}
+                  {files.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <h3 className="text-sm font-medium text-zinc-300">
+                        Selected File
+                      </h3>
+                      <ul className="max-h-40 space-y-1 overflow-y-auto">
+                        {files.map((file, index) => (
+                          <li
+                            key={index}
+                            className={`flex cursor-pointer items-center justify-between rounded px-2 py-1 text-sm ${
+                              index === currentIndex
+                                ? 'bg-primary/20 text-primary'
+                                : 'bg-white/[0.03] text-zinc-300'
+                            }`}
+                            onClick={() => {
+                              setCurrentIndex(index);
+                              if (workerState.type === 'done') {
+                                setWorkerState({ type: 'ready' });
+                              }
+                            }}
+                          >
+                            <span className="mr-2 truncate">{file.name}</span>
+                            <span className="text-zinc-500">
+                              {formatFileSize(file.size)}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        variant="ghost"
+                        className="w-full text-sm text-red-400"
+                        onClick={handleClear}
+                        disabled={workerState.type === 'processing'}
                       >
-                        <span className="mr-2 truncate">{file.name}</span>
-                        <span className="text-gray-500 dark:text-gray-400">
-                          {formatFileSize(file.size)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                  <button
-                    onClick={handleClear}
-                    className="w-full text-sm text-red-600 hover:text-red-700 dark:hover:text-red-400"
-                    disabled={workerState.type === 'processing'}
-                  >
-                    Clear
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="space-y-6 lg:col-span-2">
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                Upscale Settings
-              </h2>
-
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Scale Factor
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => setScale(2)}
-                    className={`rounded-lg border px-4 py-3 text-center transition-colors ${
-                      scale === 2
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                    disabled={workerState.type === 'processing'}
-                  >
-                    <div className="text-lg font-bold">2×</div>
-                    <div className="text-xs opacity-80">4× pixels • Fast</div>
-                  </button>
-                  <button
-                    onClick={() => setScale(4)}
-                    className={`rounded-lg border px-4 py-3 text-center transition-colors ${
-                      scale === 4
-                        ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                    disabled={workerState.type === 'processing'}
-                  >
-                    <div className="text-lg font-bold">4×</div>
-                    <div className="text-xs opacity-80">16× pixels • Slower</div>
-                  </button>
-                </div>
-              </div>
-
-              {originalDimensions && (
-                <div className="mb-6 space-y-2 border-t border-gray-200 pt-4 text-sm dark:border-gray-700">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Original:{' '}
-                    <span className="font-mono font-medium text-gray-900 dark:text-white">
-                      {originalDimensions.width} × {originalDimensions.height}
-                    </span>{' '}
-                    • {formatFileSize(files[currentIndex]?.size || 0)}
-                  </p>
-                  {outputDims && (
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Output:{' '}
-                      <span className="font-mono font-medium text-gray-900 dark:text-white">
-                        {outputDims.width} × {outputDims.height}
-                      </span>
-                    </p>
+                        Clear
+                      </Button>
+                    </div>
                   )}
-                  {exceedsMax && (
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-                      Image exceeds the recommended maximum input size for {scale}× scaling (
-                      {maxInput.width}×{maxInput.height}px). Processing may fail or be very slow.
+                </Panel>
+              </div>
+            </div>
+
+            <div className="space-y-6 lg:col-span-2">
+              <Panel variant="elevated" padding="md">
+                <PanelHeader title="Upscale Settings" />
+
+                <div className="mb-6">
+                  <label className="mb-2 block text-sm font-medium text-zinc-400">
+                    Scale Factor
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setScale(2)}
+                      className={`rounded-lg border px-4 py-3 text-center transition-colors ${
+                        scale === 2
+                          ? 'border-primary/40 bg-primary/20 text-primary'
+                          : 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                      }`}
+                      disabled={workerState.type === 'processing'}
+                    >
+                      <div className="text-lg font-bold">2×</div>
+                      <div className="text-xs opacity-80">4× pixels • Fast</div>
+                    </button>
+                    <button
+                      onClick={() => setScale(4)}
+                      className={`rounded-lg border px-4 py-3 text-center transition-colors ${
+                        scale === 4
+                          ? 'border-primary/40 bg-primary/20 text-primary'
+                          : 'border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                      }`}
+                      disabled={workerState.type === 'processing'}
+                    >
+                      <div className="text-lg font-bold">4×</div>
+                      <div className="text-xs opacity-80">16× pixels • Slower</div>
+                    </button>
+                  </div>
+                </div>
+
+                {originalDimensions && (
+                  <div className="mb-6 space-y-2 border-t border-white/10 pt-4 text-sm">
+                    <p className="text-zinc-400">
+                      Original:{' '}
+                      <span className="font-mono font-medium text-zinc-300">
+                        {originalDimensions.width} × {originalDimensions.height}
+                      </span>{' '}
+                      • {formatFileSize(files[currentIndex]?.size || 0)}
+                    </p>
+                    {outputDims && (
+                      <p className="text-zinc-400">
+                        Output:{' '}
+                        <span className="font-mono font-medium text-zinc-300">
+                          {outputDims.width} × {outputDims.height}
+                        </span>
+                      </p>
+                    )}
+                    {exceedsMax && (
+                      <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-3 text-xs text-amber-300">
+                        Image exceeds the recommended maximum input size for {scale}× scaling (
+                        {maxInput.width}×{maxInput.height}px). Processing may fail or be very slow.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {workerState.type === 'processing' && (
+                  <div className="mb-6">
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="text-zinc-300">Upscaling...</span>
+                      {workerState.progress !== undefined && (
+                        <span className="text-zinc-400">
+                          {Math.round(workerState.progress * 100)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-white/5">
+                      <div
+                        className="h-full bg-primary transition-all duration-300"
+                        style={{
+                          width: `${
+                            workerState.progress !== undefined
+                              ? workerState.progress * 100
+                              : 0
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      Processing patches with AI model. First run downloads model weights (~1MB).
+                    </p>
+                  </div>
+                )}
+
+                {workerState.type === 'error' && (
+                  <div
+                    className="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300"
+                    role="alert"
+                  >
+                    {workerState.error}
+                  </div>
+                )}
+
+                <div
+                  ref={containerRef}
+                  className="relative mx-auto mb-6 max-w-md select-none overflow-hidden rounded-xl border border-white/10 bg-zinc-900/50"
+                  style={{
+                    aspectRatio: originalDimensions
+                      ? `${originalDimensions.width}/${originalDimensions.height}`
+                      : '1',
+                    touchAction: 'none',
+                  }}
+                  onMouseDown={(e) => {
+                    if (!containerRef.current || workerState.type !== 'done') return;
+                    isDragging.current = true;
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    setSliderPosition(Math.max(0, Math.min(100, x)));
+                  }}
+                  onMouseMove={(e) => {
+                    if (!isDragging.current || !containerRef.current) return;
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    setSliderPosition(Math.max(0, Math.min(100, x)));
+                  }}
+                  onMouseUp={() => {
+                    isDragging.current = false;
+                  }}
+                  onMouseLeave={() => {
+                    isDragging.current = false;
+                  }}
+                  onTouchStart={(e) => {
+                    if (!containerRef.current || workerState.type !== 'done') return;
+                    isDragging.current = true;
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const x =
+                      ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                    setSliderPosition(Math.max(0, Math.min(100, x)));
+                  }}
+                  onTouchMove={(e) => {
+                    if (!isDragging.current || !containerRef.current) return;
+                    const rect = containerRef.current.getBoundingClientRect();
+                    const x =
+                      ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                    setSliderPosition(Math.max(0, Math.min(100, x)));
+                  }}
+                  onTouchEnd={() => {
+                    isDragging.current = false;
+                  }}
+                >
+                  {currentPreview && (
+                    <div className="relative h-full w-full">
+                      <img
+                        src={currentPreview}
+                        alt={currentFile?.name || 'Preview'}
+                        className="pointer-events-none block h-full w-full"
+                        style={{ objectFit: 'contain' }}
+                      />
+                      {workerState.type === 'done' && workerState.resultBlobUrl && (
+                        <img
+                          src={workerState.resultBlobUrl}
+                          alt="Upscaled result"
+                          className="pointer-events-none absolute inset-0 block h-full w-full"
+                          style={{
+                            objectFit: 'contain',
+                            clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
+                          }}
+                        />
+                      )}
+                      <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                        Original
+                      </div>
+                      {workerState.type === 'done' && workerState.resultBlobUrl && (
+                        <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
+                          Upscaled
+                        </div>
+                      )}
+                      {workerState.type === 'done' && (
+                        <div
+                          className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
+                          style={{ left: `${sliderPosition}%` }}
+                        >
+                          <div className="absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md">
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="h-4 w-4 text-gray-600"
+                              fill="currentColor"
+                            >
+                              <path d="M8 5l-5 7 5 7" />
+                              <path d="M16 5l5 7-5 7" />
+                            </svg>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {!currentPreview && (
+                    <div className="absolute inset-0 flex items-center justify-center text-zinc-500">
+                      <p>Upload an image to start</p>
                     </div>
                   )}
                 </div>
-              )}
 
-              {workerState.type === 'processing' && (
-                <div className="mb-6">
-                  <div className="mb-1 flex justify-between text-sm">
-                    <span>Upscaling...</span>
-                    {workerState.progress !== undefined && (
-                      <span>{Math.round(workerState.progress * 100)}%</span>
-                    )}
-                  </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                    <div
-                      className="h-full bg-blue-600 transition-all duration-300"
-                      style={{
-                        width: `${
-                          workerState.progress !== undefined
-                            ? workerState.progress * 100
-                            : 0
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    Processing patches with AI model. First run downloads model weights (~1MB).
-                  </p>
+                <div className="flex gap-3">
+                  {isClient && (
+                    <>
+                      <Button
+                        variant="primary"
+                        onClick={handleProcess}
+                        disabled={
+                          workerState.type === 'processing' ||
+                          files.length === 0 ||
+                          workerState.type !== 'ready'
+                        }
+                        className="flex-1"
+                      >
+                        {workerState.type === 'processing'
+                          ? 'Upscaling...'
+                          : `Upscale ${scale}×`}
+                      </Button>
+                      {workerState.type === 'done' && (
+                        <>
+                          <Button variant="glass" onClick={handleDownload}>
+                            Download PNG
+                          </Button>
+                          <Button
+                            variant="glass"
+                            onClick={() => setIsFullscreen(true)}
+                          >
+                            Fullscreen
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
+              </Panel>
 
-              {workerState.type === 'error' && (
-                <div
-                  className="mb-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-300"
-                  role="alert"
+              {results.length > 0 && (
+                <Panel variant="elevated" padding="md">
+                  <PanelHeader title={`Results (${results.length})`} />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {results.map((result, index) => (
+                      <div
+                        key={index}
+                        className="overflow-hidden rounded-lg border border-white/10"
+                      >
+                        <img
+                          src={URL.createObjectURL(result.blob)}
+                          alt={`Upscaled ${result.originalName}`}
+                          className="h-48 w-full bg-zinc-900 object-contain"
+                        />
+                        <div className="space-y-2 p-3">
+                          <p className="truncate text-sm font-medium text-zinc-300">
+                            {result.filename}
+                          </p>
+                          <p className="text-xs text-zinc-500">
+                            {formatFileSize(result.blob.size)}
+                          </p>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            fullWidth
+                            onClick={() =>
+                              downloadBlob(result.blob, result.filename)
+                            }
+                          >
+                            Download
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {isFullscreen && (
+          <div className="fixed inset-0 z-50 flex flex-col bg-black">
+            <div className="flex items-center justify-between px-4 py-3">
+              <span className="text-sm text-zinc-400">
+                {currentFile?.name} — Drag to compare
+              </span>
+              <Button
+                variant="glass"
+                size="iconSm"
+                className="rounded-full"
+                onClick={() => setIsFullscreen(false)}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  {workerState.error}
-                </div>
-              )}
-
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </Button>
+            </div>
+            <div className="flex flex-1 items-center justify-center p-4">
               <div
-                ref={containerRef}
-                className="relative mx-auto mb-6 max-w-md overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800 select-none"
-                style={{ aspectRatio: originalDimensions ? `${originalDimensions.width}/${originalDimensions.height}` : '1', touchAction: 'none' }}
+                className="relative h-full w-full max-w-full select-none overflow-hidden"
+                style={{
+                  aspectRatio: originalDimensions
+                    ? `${originalDimensions.width}/${originalDimensions.height}`
+                    : '1',
+                  maxHeight: '100%',
+                  touchAction: 'none',
+                }}
                 onMouseDown={(e) => {
-                  if (!containerRef.current || workerState.type !== 'done') return;
-                  isDragging.current = true;
-                  const rect = containerRef.current.getBoundingClientRect();
+                  const rect = e.currentTarget.getBoundingClientRect();
                   const x = ((e.clientX - rect.left) / rect.width) * 100;
                   setSliderPosition(Math.max(0, Math.min(100, x)));
+                  isDragging.current = true;
                 }}
                 onMouseMove={(e) => {
-                  if (!isDragging.current || !containerRef.current) return;
-                  const rect = containerRef.current.getBoundingClientRect();
+                  if (!isDragging.current) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
                   const x = ((e.clientX - rect.left) / rect.width) * 100;
                   setSliderPosition(Math.max(0, Math.min(100, x)));
                 }}
-                onMouseUp={() => { isDragging.current = false; }}
-                onMouseLeave={() => { isDragging.current = false; }}
+                onMouseUp={() => {
+                  isDragging.current = false;
+                }}
+                onMouseLeave={() => {
+                  isDragging.current = false;
+                }}
                 onTouchStart={(e) => {
-                  if (!containerRef.current || workerState.type !== 'done') return;
-                  isDragging.current = true;
-                  const rect = containerRef.current.getBoundingClientRect();
-                  const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x =
+                    ((e.touches[0].clientX - rect.left) / rect.width) * 100;
                   setSliderPosition(Math.max(0, Math.min(100, x)));
+                  isDragging.current = true;
                 }}
                 onTouchMove={(e) => {
-                  if (!isDragging.current || !containerRef.current) return;
-                  const rect = containerRef.current.getBoundingClientRect();
-                  const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+                  if (!isDragging.current) return;
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x =
+                    ((e.touches[0].clientX - rect.left) / rect.width) * 100;
                   setSliderPosition(Math.max(0, Math.min(100, x)));
                 }}
-                onTouchEnd={() => { isDragging.current = false; }}
+                onTouchEnd={() => {
+                  isDragging.current = false;
+                }}
               >
                 {currentPreview && (
-                  <div className="relative h-full w-full">
+                  <>
                     <img
                       src={currentPreview}
-                      alt={currentFile?.name || 'Preview'}
-                      className="pointer-events-none block h-full w-full"
+                      alt="Original"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
                       style={{ objectFit: 'contain' }}
                     />
-                    {workerState.type === 'done' && workerState.resultBlobUrl && (
+                    {workerState.resultBlobUrl && (
                       <img
                         src={workerState.resultBlobUrl}
-                        alt="Upscaled result"
-                        className="pointer-events-none absolute inset-0 block h-full w-full"
+                        alt="Upscaled"
+                        className="pointer-events-none absolute inset-0 h-full w-full"
                         style={{
                           objectFit: 'contain',
                           clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
@@ -480,200 +704,33 @@ export default function UpscalePage() {
                     <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
                       Original
                     </div>
-                    {workerState.type === 'done' && workerState.resultBlobUrl && (
+                    {workerState.resultBlobUrl && (
                       <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
                         Upscaled
                       </div>
                     )}
-                    {workerState.type === 'done' && (
-                      <div
-                        className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
-                        style={{ left: `${sliderPosition}%` }}
-                      >
-                        <div className="absolute -left-3 -translate-y-1/2 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md">
-                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-600" fill="currentColor">
-                            <path d="M8 5l-5 7 5 7" />
-                            <path d="M16 5l5 7-5 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!currentPreview && (
-                  <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                    <p>Upload an image to start</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                {isClient && (
-                  <>
-                    <button
-                      onClick={handleProcess}
-                      disabled={
-                        workerState.type === 'processing' ||
-                        files.length === 0 ||
-                        workerState.type !== 'ready'
-                      }
-                      className="flex-1 rounded-lg bg-blue-600 px-4 py-3 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    <div
+                      className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
+                      style={{ left: `${sliderPosition}%` }}
                     >
-                      {workerState.type === 'processing'
-                        ? 'Upscaling...'
-                        : `Upscale ${scale}×`}
-                    </button>
-                    {workerState.type === 'done' && (
-                      <>
-                        <button
-                          onClick={handleDownload}
-                          className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                      <div className="absolute -left-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4 text-gray-600"
+                          fill="currentColor"
                         >
-                          Download PNG
-                        </button>
-                        <button
-                          onClick={() => setIsFullscreen(true)}
-                          className="rounded-lg bg-gray-100 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                        >
-                          Fullscreen
-                        </button>
-                      </>
-                    )}
+                          <path d="M8 5l-5 7 5 7" />
+                          <path d="M16 5l5 7-5 7" />
+                        </svg>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>
             </div>
-
-            {results.length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-                <h2 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
-                  Results ({results.length})
-                </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {results.map((result, index) => (
-                    <div
-                      key={index}
-                      className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700"
-                    >
-                      <img
-                        src={URL.createObjectURL(result.blob)}
-                        alt={`Upscaled ${result.originalName}`}
-                        className="h-48 w-full bg-gray-100 object-contain dark:bg-gray-700"
-                      />
-                      <div className="space-y-2 p-3">
-                        <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
-                          {result.filename}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatFileSize(result.blob.size)}
-                        </p>
-                        <button
-                          onClick={() => downloadBlob(result.blob, result.filename)}
-                          className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition-colors hover:bg-blue-700"
-                        >
-                          Download
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
-
-      {isFullscreen && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-black">
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-gray-400">
-              {currentFile?.name} — Drag to compare
-            </span>
-            <button
-              onClick={() => setIsFullscreen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          <div className="flex flex-1 items-center justify-center p-4">
-            <div
-              className="relative h-full w-full max-w-full max-h-full overflow-hidden select-none"
-              style={{ aspectRatio: originalDimensions ? `${originalDimensions.width}/${originalDimensions.height}` : '1', maxHeight: '100%', touchAction: 'none' }}
-              onMouseDown={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                setSliderPosition(Math.max(0, Math.min(100, x)));
-                isDragging.current = true;
-              }}
-              onMouseMove={(e) => {
-                if (!isDragging.current) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.clientX - rect.left) / rect.width) * 100;
-                setSliderPosition(Math.max(0, Math.min(100, x)));
-              }}
-              onMouseUp={() => { isDragging.current = false; }}
-              onMouseLeave={() => { isDragging.current = false; }}
-              onTouchStart={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-                setSliderPosition(Math.max(0, Math.min(100, x)));
-                isDragging.current = true;
-              }}
-              onTouchMove={(e) => {
-                if (!isDragging.current) return;
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-                setSliderPosition(Math.max(0, Math.min(100, x)));
-              }}
-              onTouchEnd={() => { isDragging.current = false; }}
-            >
-              {currentPreview && (
-                <>
-                  <img
-                    src={currentPreview}
-                    alt="Original"
-                    className="pointer-events-none absolute inset-0 h-full w-full"
-                    style={{ objectFit: 'contain' }}
-                  />
-                  {workerState.resultBlobUrl && (
-                    <img
-                      src={workerState.resultBlobUrl}
-                      alt="Upscaled"
-                      className="pointer-events-none absolute inset-0 h-full w-full"
-                      style={{
-                        objectFit: 'contain',
-                        clipPath: `polygon(${sliderPosition}% 0, 100% 0, 100% 100%, ${sliderPosition}% 100%)`,
-                      }}
-                    />
-                  )}
-                  <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
-                    Original
-                  </div>
-                  {workerState.resultBlobUrl && (
-                    <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/60 px-2 py-0.5 text-xs text-white">
-                      Upscaled
-                    </div>
-                  )}
-                  <div
-                    className="absolute inset-y-0 z-10 w-0.5 cursor-col-resize bg-white shadow-md"
-                    style={{ left: `${sliderPosition}%` }}
-                  >
-                    <div className="absolute -left-3 -translate-y-1/2 top-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-md">
-                      <svg viewBox="0 0 24 24" className="h-4 w-4 text-gray-600" fill="currentColor">
-                        <path d="M8 5l-5 7 5 7" />
-                        <path d="M16 5l5 7-5 7" />
-                      </svg>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
+        )}
+      </motion.main>
+    </PageBackground>
   );
 }
