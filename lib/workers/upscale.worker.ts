@@ -47,7 +47,7 @@ self.onmessage = async (event: MessageEvent<UpscaleMessage>) => {
       const result = await upscaler.upscale(tensor, {
         output: 'tensor' as const,
         patchSize: 64,
-        padding: 2,
+        padding: 8,
         progress: (progress: number) => {
           self.postMessage({ type: 'progress', progress } as UpscaleResponse);
         },
