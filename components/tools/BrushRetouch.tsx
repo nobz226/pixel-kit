@@ -39,6 +39,11 @@ export function BrushRetouch({
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const lastPointer = useRef({ x: 0, y: 0 });
+
   // Load original image
   useEffect(() => {
     const img = new Image();
@@ -46,7 +51,6 @@ export function BrushRetouch({
     img.onload = () => {
       originalImageRef.current = img;
       setOriginalImageLoaded(true);
-      // Save initial mask state (all white = fully visible)
       if (maskCanvasRef.current) {
         const ctx = maskCanvasRef.current.getContext('2d');
         if (ctx) {
@@ -79,7 +83,12 @@ export function BrushRetouch({
     canvas.height = height;
   }, [width, height]);
 
-  // Render composite: checkerboard -> original (dimmed) -> result clipped by mask
+  // Reset zoom/pan when width/height change
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [width, height]);
+
   const renderComposite = useCallback(() => {
     const displayCanvas = canvasRef.current;
     const maskCanvas = maskCanvasRef.current;
@@ -103,6 +112,14 @@ export function BrushRetouch({
 
     displayCtx.clearRect(0, 0, containerWidth, containerHeight);
 
+    // Apply zoom/pan transform
+    displayCtx.save();
+    const cx = containerWidth / 2;
+    const cy = containerHeight / 2;
+    displayCtx.translate(cx + pan.x, cy + pan.y);
+    displayCtx.scale(zoom, zoom);
+    displayCtx.translate(-cx, -cy);
+
     if (showCheckerboard) {
       drawCheckerboard(displayCtx, containerWidth, containerHeight, 24, '#2a2a2c', '#1e1e20');
     } else {
@@ -118,7 +135,7 @@ export function BrushRetouch({
     const drawX = (containerWidth - drawWidth) / 2;
     const drawY = (containerHeight - drawHeight) / 2;
 
-    // Layer 1: result (bg-removed) clipped by mask — drawn where mask is opaque
+    // Layer 1: result clipped by mask
     offscreenCtx.clearRect(0, 0, width, height);
     offscreenCtx.drawImage(resultBitmap, 0, 0);
     offscreenCtx.globalCompositeOperation = 'destination-in';
@@ -133,7 +150,7 @@ export function BrushRetouch({
       drawHeight
     );
 
-    // Layer 2: original image clipped by INVERTED mask — drawn where mask is transparent
+    // Layer 2: original clipped by inverted mask
     if (showOriginal && originalImageLoaded && originalImageRef.current) {
       offscreenCtx.clearRect(0, 0, width, height);
       offscreenCtx.drawImage(originalImageRef.current, 0, 0, width, height);
@@ -149,13 +166,14 @@ export function BrushRetouch({
         drawHeight
       );
     }
-  }, [resultBitmap, width, height, backgroundColor, showCheckerboard, originalImageLoaded, showOriginal]);
+
+    displayCtx.restore();
+  }, [resultBitmap, width, height, backgroundColor, showCheckerboard, originalImageLoaded, showOriginal, zoom, pan]);
 
   useEffect(() => {
     renderComposite();
   }, [renderComposite]);
 
-  // Convert display coordinates to image coordinates
   const getImageCoords = useCallback(
     (clientX: number, clientY: number) => {
       const canvas = canvasRef.current;
@@ -164,7 +182,12 @@ export function BrushRetouch({
       const containerWidth = rect.width;
       const containerHeight = rect.height;
 
-      // Calculate same draw position as renderComposite
+      // Reverse the zoom/pan transform
+      const cx = containerWidth / 2;
+      const cy = containerHeight / 2;
+      const tx = ((clientX - rect.left - cx - pan.x) / zoom) + cx;
+      const ty = ((clientY - rect.top - cy - pan.y) / zoom) + cy;
+
       const scaleX = containerWidth / width;
       const scaleY = containerHeight / height;
       const drawScale = Math.min(scaleX, scaleY, 1);
@@ -173,15 +196,13 @@ export function BrushRetouch({
       const drawX = (containerWidth - drawWidth) / 2;
       const drawY = (containerHeight - drawHeight) / 2;
 
-      // Convert to image coordinates
-      const x = (clientX - rect.left - drawX) / drawScale;
-      const y = (clientY - rect.top - drawY) / drawScale;
+      const x = (tx - drawX) / drawScale;
+      const y = (ty - drawY) / drawScale;
       return { x, y };
     },
-    [width, height]
+    [width, height, zoom, pan]
   );
 
-  // Paint on mask canvas (image coordinates)
   const paintOnMask = useCallback(
     (x: number, y: number) => {
       const maskCanvas = maskCanvasRef.current;
@@ -200,21 +221,33 @@ export function BrushRetouch({
     [mode, brushSize, renderComposite]
   );
 
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setZoom((prev) => Math.min(Math.max(prev * delta, 0.1), 50));
+  }, []);
+
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
+      lastPointer.current = { x: e.clientX, y: e.clientY };
+
+      if (e.button === 1 || e.shiftKey) {
+        isPanning.current = true;
+        return;
+      }
+
       const coords = getImageCoords(e.clientX, e.clientY);
       if (!coords) return;
       if (coords.x < 0 || coords.x > width || coords.y < 0 || coords.y > height) return;
 
-      // Save to history before painting
       const maskCanvas = maskCanvasRef.current;
       if (maskCanvas) {
         const dataUrl = maskCanvas.toDataURL();
         setHistory((prev) => {
           const newHistory = prev.slice(0, historyIndex + 1);
           newHistory.push(dataUrl);
-          return newHistory.slice(-20); // Keep max 20 history states
+          return newHistory.slice(-20);
         });
         setHistoryIndex((prev) => Math.min(prev + 1, 19));
       }
@@ -227,6 +260,13 @@ export function BrushRetouch({
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
+      if (isPanning.current) {
+        const dx = e.clientX - lastPointer.current.x;
+        const dy = e.clientY - lastPointer.current.y;
+        lastPointer.current = { x: e.clientX, y: e.clientY };
+        setPan((prev) => ({ x: prev.x + dx, y: prev.y + dy }));
+        return;
+      }
       if (!isPainting) return;
       e.preventDefault();
       const coords = getImageCoords(e.clientX, e.clientY);
@@ -239,6 +279,7 @@ export function BrushRetouch({
 
   const handlePointerUp = useCallback(() => {
     setIsPainting(false);
+    isPanning.current = false;
   }, []);
 
   const handleUndo = useCallback(() => {
@@ -289,6 +330,8 @@ export function BrushRetouch({
     const dataUrl = maskCanvas.toDataURL();
     setHistory([dataUrl]);
     setHistoryIndex(0);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
     renderComposite();
   }, [width, height, renderComposite]);
 
@@ -296,7 +339,6 @@ export function BrushRetouch({
     const offscreenCanvas = offscreenCanvasRef.current;
     if (!offscreenCanvas) return;
 
-    // Re-create the final composite at full resolution
     const ctx = offscreenCanvas.getContext('2d');
     if (!ctx) return;
 
@@ -346,9 +388,16 @@ export function BrushRetouch({
           onPointerUp={handlePointerUp}
           onPointerLeave={handlePointerUp}
           onPointerCancel={handlePointerUp}
+          onWheel={handleWheel}
         />
         <canvas ref={maskCanvasRef} className="hidden" />
         <canvas ref={offscreenCanvasRef} className="hidden" />
+        {/* Zoom info overlay */}
+        {zoom !== 1 && (
+          <div className="absolute bottom-2 left-2 px-2 py-1 rounded-md bg-black/60 text-xs text-zinc-400 font-mono">
+            {Math.round(zoom * 100)}%
+          </div>
+        )}
       </div>
 
       {/* Brush Controls */}
@@ -416,6 +465,41 @@ export function BrushRetouch({
               )}
             >
               {showOriginal ? 'Original On' : 'Original Off'}
+            </button>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setZoom((v) => Math.max(v - 0.5, 0.1))}
+              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+              aria-label="Zoom out"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+                <path d="M8 11h6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+              className="px-2 py-1 rounded-md text-xs font-mono text-zinc-400 hover:text-white hover:bg-white/5 transition-colors min-w-[3rem] text-center"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom((v) => Math.min(v + 0.5, 50))}
+              className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+              aria-label="Zoom in"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+                <path d="M8 11h6M11 8v6" />
+              </svg>
             </button>
           </div>
 
