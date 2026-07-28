@@ -11,10 +11,10 @@ import {
   formatFileSize,
   drawCheckerboard,
 } from '@/lib/canvas-utils';
-import { backgroundRemovalTool } from '@/lib/tools/background-removal';
 import { PageBackground } from '@/components/background/BackgroundEffects';
 import { Button } from '@/components/ui/Button';
 import { Panel, PanelHeader } from '@/components/ui/Panel';
+import { BrushRetouch } from '@/components/tools/BrushRetouch';
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 
@@ -33,9 +33,6 @@ export default function RemoveBackgroundPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [workerState, setWorkerState] = useState<WorkerState>({ type: 'idle' });
   const [isClient, setIsClient] = useState(false);
-  const [results, setResults] = useState<
-    Array<{ blob: Blob; filename: string; originalName: string }>
-  >([]);
   const [originalDimensions, setOriginalDimensions] = useState<{
     width: number;
     height: number;
@@ -47,6 +44,10 @@ export default function RemoveBackgroundPage() {
   const workerRef = useRef<Worker | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const resultBlobUrlRef = useRef<string | null>(null);
+
+  // Retouch mode state
+  const [retouchMode, setRetouchMode] = useState(false);
+  const [retouchResultBlob, setRetouchResultBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
     let worker: Worker;
@@ -125,7 +126,6 @@ export default function RemoveBackgroundPage() {
       alert('Some files exceed the 100MB limit and were skipped');
     }
     setFiles(validFiles);
-    setResults([]);
 
     const newBitmaps = new Map<number, ImageBitmap>();
     const newPreviews = new Map<number, string>();
@@ -190,19 +190,30 @@ export default function RemoveBackgroundPage() {
     }
   }, [workerState, files, currentIndex]);
 
-  const handleDownloadAll = useCallback(async () => {
-    handleDownload();
-  }, [handleDownload]);
+  const handleEnterRetouch = useCallback(() => {
+    if (workerState.type === 'done' && workerState.result) {
+      setRetouchMode(true);
+    }
+  }, [workerState]);
+
+  // Handle retouch result download
+  useEffect(() => {
+    if (retouchResultBlob) {
+      const filename = getOutputFilename(files[currentIndex]?.name || 'image', 'png', 'retouched');
+      downloadBlob(retouchResultBlob, filename);
+      // Reset after download completes
+      setTimeout(() => setRetouchResultBlob(null), 0);
+    }
+  }, [retouchResultBlob, files, currentIndex]);
 
   const handleClear = useCallback(() => {
     if (resultBlobUrlRef.current) {
       URL.revokeObjectURL(resultBlobUrlRef.current);
       resultBlobUrlRef.current = null;
     }
-    setFiles([]);
+setFiles([]);
     setBitmaps(new Map());
     setPreviews(new Map());
-    setResults([]);
     setOriginalDimensions(null);
     setOriginalSize(0);
     setWorkerState({ type: 'idle' });
@@ -413,7 +424,7 @@ export default function RemoveBackgroundPage() {
                 )}
 
                 <div className="mt-6 flex gap-3">
-                  {isClient && (
+                  {isClient && !retouchMode && (
                     <>
                       <Button
                         onClick={handleProcess}
@@ -431,13 +442,22 @@ export default function RemoveBackgroundPage() {
                           : 'Remove Background'}
                       </Button>
                       {workerState.type === 'done' && (
-                        <Button
-                          onClick={handleDownload}
-                          variant="glass"
-                          size="md"
-                        >
-                          Download PNG
-                        </Button>
+                        <>
+                          <Button
+                            onClick={handleEnterRetouch}
+                            variant="secondary"
+                            size="md"
+                          >
+                            Retouch
+                          </Button>
+                          <Button
+                            onClick={handleDownload}
+                            variant="glass"
+                            size="md"
+                          >
+                            Download PNG
+                          </Button>
+                        </>
                       )}
                     </>
                   )}
@@ -447,6 +467,19 @@ export default function RemoveBackgroundPage() {
           </div>
         </div>
       </motion.main>
+
+      {retouchMode && workerState.type === 'done' && workerState.result && (
+        <BrushRetouch
+          resultBitmap={workerState.result}
+          originalPreviewUrl={previews.get(currentIndex) || ''}
+          width={workerState.result.width}
+          height={workerState.result.height}
+          onApply={setRetouchResultBlob}
+          onCancel={() => setRetouchMode(false)}
+          backgroundColor={backgroundColor}
+          showCheckerboard={showCheckerboard}
+        />
+      )}
     </PageBackground>
   );
 }
