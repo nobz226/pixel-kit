@@ -34,6 +34,7 @@ export function BrushRetouch({
 
   const [brushSize, setBrushSize] = useState(40);
   const [mode, setMode] = useState<'erase' | 'restore'>('erase');
+  const [showOriginal, setShowOriginal] = useState(false);
   const [isPainting, setIsPainting] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -133,7 +134,7 @@ export function BrushRetouch({
     );
 
     // Layer 2: original image clipped by INVERTED mask — drawn where mask is transparent
-    if (originalImageLoaded && originalImageRef.current) {
+    if (showOriginal && originalImageLoaded && originalImageRef.current) {
       offscreenCtx.clearRect(0, 0, width, height);
       offscreenCtx.drawImage(originalImageRef.current, 0, 0, width, height);
       offscreenCtx.globalCompositeOperation = 'destination-out';
@@ -148,7 +149,7 @@ export function BrushRetouch({
         drawHeight
       );
     }
-  }, [resultBitmap, width, height, backgroundColor, showCheckerboard, originalImageLoaded]);
+  }, [resultBitmap, width, height, backgroundColor, showCheckerboard, originalImageLoaded, showOriginal]);
 
   useEffect(() => {
     renderComposite();
@@ -400,6 +401,22 @@ export function BrushRetouch({
                 Restore
               </button>
             </div>
+          </div>
+
+          {/* Show Original Toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowOriginal((v) => !v)}
+              className={cn(
+                'px-3 py-1.5 rounded-md text-sm font-medium border transition-all',
+                showOriginal
+                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                  : 'text-zinc-400 hover:text-white border-transparent'
+              )}
+            >
+              {showOriginal ? 'Original On' : 'Original Off'}
+            </button>
           </div>
 
           {/* Undo/Redo */}
