@@ -46,6 +46,7 @@ export default function CropPage() {
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const cropAtDragStart = useRef<CropArea | null>(null);
 
   const handleFiles = useCallback(
     async (newFiles: File[]) => {
@@ -159,6 +160,7 @@ export default function CropPage() {
       if (!type || !cropArea) return;
 
       e.preventDefault();
+      cropAtDragStart.current = { ...cropArea };
       setDragType(type);
       setDragStart({ x: e.clientX, y: e.clientY });
       setIsDragging(true);
@@ -168,91 +170,79 @@ export default function CropPage() {
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isDragging || !dragStart || !dragType || !cropArea || !originalDimensions) return;
+      if (!isDragging || !dragStart || !dragType || !cropAtDragStart.current || !originalDimensions) return;
 
+      const base = cropAtDragStart.current;
       const dx = (e.clientX - dragStart.x) / previewScale;
       const dy = (e.clientY - dragStart.y) / previewScale;
 
-      const newCrop = { ...cropArea };
+      let newCrop: CropArea;
 
       if (dragType === 'move') {
-        newCrop.x = Math.max(
-          0,
-          Math.min(originalDimensions.width - cropArea.width, cropArea.x + dx)
-        );
-        newCrop.y = Math.max(
-          0,
-          Math.min(originalDimensions.height - cropArea.height, cropArea.y + dy)
-        );
+        newCrop = {
+          x: Math.max(0, Math.min(originalDimensions.width - base.width, base.x + dx)),
+          y: Math.max(0, Math.min(originalDimensions.height - base.height, base.y + dy)),
+          width: base.width,
+          height: base.height,
+        };
       } else if (dragType.startsWith('resize')) {
         const ratio = selectedRatio;
         const isWest = dragType.includes('w');
         const isNorth = dragType.includes('n');
 
         if (isWest) {
-          const newX = Math.max(0, Math.min(cropArea.x + cropArea.width - 10, cropArea.x + dx));
-          const newWidth = cropArea.width - (newX - cropArea.x);
+          const newX = Math.max(0, Math.min(base.x + base.width - 10, base.x + dx));
+          const newWidth = base.width - (newX - base.x);
           if (ratio) {
             const newHeight = newWidth / ratio;
-            newCrop.x = newX;
-            newCrop.width = newWidth;
             if (isNorth) {
-              newCrop.y = Math.max(
-                0,
-                Math.min(
-                  cropArea.y + cropArea.height - newHeight,
-                  cropArea.y - (newHeight - cropArea.height) / 2
-                )
-              );
+              newCrop = {
+                x: newX,
+                y: Math.max(0, Math.min(base.y + base.height - newHeight, base.y - (newHeight - base.height) / 2)),
+                width: newWidth,
+                height: newHeight,
+              };
             } else {
-              newCrop.y = Math.max(
-                0,
-                Math.min(
-                  originalDimensions.height - newHeight,
-                  cropArea.y + (cropArea.height - newHeight) / 2
-                )
-              );
+              newCrop = {
+                x: newX,
+                y: Math.max(0, Math.min(originalDimensions.height - newHeight, base.y + (base.height - newHeight) / 2)),
+                width: newWidth,
+                height: newHeight,
+              };
             }
-            newCrop.height = newHeight;
           } else {
-            newCrop.x = newX;
-            newCrop.width = newWidth;
+            newCrop = { x: newX, y: base.y, width: newWidth, height: base.height };
           }
         } else {
-          const newWidth = Math.max(
-            10,
-            Math.min(originalDimensions.width - cropArea.x, cropArea.width + dx)
-          );
+          const newWidth = Math.max(10, Math.min(originalDimensions.width - base.x, base.width + dx));
           if (ratio) {
             const newHeight = newWidth / ratio;
-            newCrop.width = newWidth;
             if (isNorth) {
-              newCrop.y = Math.max(
-                0,
-                Math.min(
-                  cropArea.y + cropArea.height - newHeight,
-                  cropArea.y - (newHeight - cropArea.height) / 2
-                )
-              );
+              newCrop = {
+                x: base.x,
+                y: Math.max(0, Math.min(base.y + base.height - newHeight, base.y - (newHeight - base.height) / 2)),
+                width: newWidth,
+                height: newHeight,
+              };
             } else {
-              newCrop.y = Math.max(
-                0,
-                Math.min(
-                  originalDimensions.height - newHeight,
-                  cropArea.y + (cropArea.height - newHeight) / 2
-                )
-              );
+              newCrop = {
+                x: base.x,
+                y: Math.max(0, Math.min(originalDimensions.height - newHeight, base.y + (base.height - newHeight) / 2)),
+                width: newWidth,
+                height: newHeight,
+              };
             }
-            newCrop.height = newHeight;
           } else {
-            newCrop.width = newWidth;
+            newCrop = { x: base.x, y: base.y, width: newWidth, height: base.height };
           }
         }
+      } else {
+        return;
       }
 
       setCropArea(newCrop);
     },
-    [isDragging, dragStart, dragType, cropArea, previewScale, selectedRatio, originalDimensions]
+    [isDragging, dragStart, dragType, previewScale, selectedRatio, originalDimensions]
   );
 
   const handleMouseUp = useCallback(() => {
