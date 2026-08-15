@@ -232,10 +232,10 @@ setFiles([]);
     };
   }, []);
 
-  // Draw checkerboard on canvas
+  // Draw checkerboard (or background color) on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || !showCheckerboard) return;
+    if (!canvas) return;
 
     const bitmap = workerState.result;
     if (!bitmap) return;
@@ -245,8 +245,14 @@ setFiles([]);
 
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
-    drawCheckerboard(ctx, bitmap.width, bitmap.height);
-  }, [workerState.result, showCheckerboard]);
+
+    if (showCheckerboard) {
+      drawCheckerboard(ctx, bitmap.width, bitmap.height);
+    } else {
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  }, [workerState.result, showCheckerboard, backgroundColor]);
 
   const currentPreview = previews.get(currentIndex);
   const currentFile = files[currentIndex];

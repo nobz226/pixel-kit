@@ -74,14 +74,6 @@ export default function CropPage() {
 
           const previewUrl = URL.createObjectURL(validFiles[i]);
           newPreviews.set(i, previewUrl);
-
-          if (i === 0) {
-            setOriginalDimensions({ width: bitmap.width, height: bitmap.height });
-            const bounds = calculateCropBounds(bitmap.width, bitmap.height, {
-              aspectRatio: selectedRatio || undefined,
-            });
-            setCropArea(bounds);
-          }
         } catch (err) {
           setError(
             `Failed to load ${validFiles[i].name}: ${err instanceof Error ? err.message : 'Unknown error'}`
@@ -92,7 +84,7 @@ export default function CropPage() {
       setBitmaps(newBitmaps);
       setPreviews(newPreviews);
     },
-    [selectedRatio]
+    []
   );
 
   const updatePreviewScale = useCallback(() => {
@@ -114,6 +106,23 @@ export default function CropPage() {
     window.addEventListener('resize', updatePreviewScale);
     return () => window.removeEventListener('resize', updatePreviewScale);
   }, [updatePreviewScale]);
+
+  // Keep crop bounds and dimensions in sync with the currently selected image
+  const currentBitmap = bitmaps.get(currentIndex);
+  const syncKey = currentBitmap
+    ? `${currentIndex}:${selectedRatio}:${currentBitmap.width}x${currentBitmap.height}`
+    : null;
+  const [lastSyncKey, setLastSyncKey] = useState<string | null>(null);
+
+  if (currentBitmap && syncKey !== lastSyncKey) {
+    setLastSyncKey(syncKey);
+    setOriginalDimensions({ width: currentBitmap.width, height: currentBitmap.height });
+    setCropArea(
+      calculateCropBounds(currentBitmap.width, currentBitmap.height, {
+        aspectRatio: selectedRatio || undefined,
+      })
+    );
+  }
 
   const getHandleType = useCallback(
     (
@@ -285,18 +294,9 @@ export default function CropPage() {
     [cropArea, originalDimensions, selectedRatio]
   );
 
-  const handleRatioChange = useCallback(
-    (ratio: number | null) => {
-      setSelectedRatio(ratio);
-      if (originalDimensions) {
-        const bounds = calculateCropBounds(originalDimensions.width, originalDimensions.height, {
-          aspectRatio: ratio || undefined,
-        });
-        setCropArea(bounds);
-      }
-    },
-    [originalDimensions]
-  );
+  const handleRatioChange = useCallback((ratio: number | null) => {
+    setSelectedRatio(ratio);
+  }, []);
 
   const handleProcess = useCallback(async () => {
     if (files.length === 0 || bitmaps.size === 0 || !cropArea) return;
@@ -310,13 +310,20 @@ export default function CropPage() {
         const bitmap = bitmaps.get(i);
         if (!bitmap) continue;
 
-        const options: CropOptions = {
-          x: cropArea.x,
-          y: cropArea.y,
-          width: cropArea.width,
-          height: cropArea.height,
+        const safeCrop: CropOptions = {
+          x: Math.max(0, Math.min(cropArea.x, bitmap.width - cropArea.width)),
+          y: Math.max(0, Math.min(cropArea.y, bitmap.height - cropArea.height)),
+          width: Math.min(cropArea.width, bitmap.width),
+          height: Math.min(cropArea.height, bitmap.height),
         };
-        const blob = await cropTool.run(bitmap, options);
+
+        if (safeCrop.width <= 0 || safeCrop.height <= 0) {
+          throw new Error(
+            `Crop region (${cropArea.width}x${cropArea.height}) exceeds the bounds of ${files[i].name} (${bitmap.width}x${bitmap.height})`
+          );
+        }
+
+        const blob = await cropTool.run(bitmap, safeCrop);
         const filename = getOutputFilename(
           files[i].name,
           'png',
@@ -351,7 +358,8 @@ export default function CropPage() {
     setOriginalDimensions(null);
     setError(null);
     setCurrentIndex(0);
-  }, []);
+    setLastSyncKey(null);
+  }, [setLastSyncKey]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -361,7 +369,6 @@ export default function CropPage() {
     };
   }, []);
 
-  const currentBitmap = bitmaps.get(currentIndex);
   const currentPreview = previews.get(currentIndex);
   const currentFile = files[currentIndex];
 
