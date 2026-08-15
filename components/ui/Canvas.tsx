@@ -4,6 +4,7 @@ import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/design-system/utils';
 import { formatBytes } from '@/lib/design-system/utils';
+import { canvasCheckerboard } from '@/lib/design-system/tokens';
 
 export interface CanvasProps extends React.HTMLAttributes<HTMLDivElement> {
   imageSrc?: string | null;
@@ -147,13 +148,13 @@ export const Canvas = React.forwardRef<HTMLDivElement, CanvasProps>(
             className="absolute inset-0"
             style={{
               backgroundImage: `
-                linear-gradient(45deg, #2a2a2c 25%, transparent 25%),
-                linear-gradient(-45deg, #2a2a2c 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #2a2a2c 75%),
-                linear-gradient(-45deg, transparent 75%, #2a2a2c 75%)
+                linear-gradient(45deg, ${canvasCheckerboard.light} 25%, transparent 25%),
+                linear-gradient(-45deg, ${canvasCheckerboard.light} 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, ${canvasCheckerboard.light} 75%),
+                linear-gradient(-45deg, transparent 75%, ${canvasCheckerboard.light} 75%)
               `,
-              backgroundSize: '24px 24px',
-              backgroundPosition: '0 0, 0 12px, 12px -12px, -12px 0px',
+              backgroundSize: `${canvasCheckerboard.size}px ${canvasCheckerboard.size}px`,
+              backgroundPosition: `0 0, 0 ${canvasCheckerboard.size / 2}px, ${canvasCheckerboard.size / 2}px -${canvasCheckerboard.size / 2}px, -${canvasCheckerboard.size / 2}px 0px`,
             }}
           />
         )}

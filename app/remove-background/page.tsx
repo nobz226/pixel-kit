@@ -41,6 +41,7 @@ export default function RemoveBackgroundPage() {
   const [originalSize, setOriginalSize] = useState(0);
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [showCheckerboard, setShowCheckerboard] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const workerRef = useRef<Worker | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -122,9 +123,10 @@ export default function RemoveBackgroundPage() {
   }, []);
 
   const handleFiles = useCallback(async (newFiles: File[]) => {
+    setError(null);
     const validFiles = newFiles.filter((f) => f.size <= MAX_FILE_SIZE);
     if (validFiles.length !== newFiles.length) {
-      alert('Some files exceed the 100MB limit and were skipped');
+      setError('Some files exceed the 100MB limit and were skipped');
     }
     setFiles(validFiles);
 
@@ -220,6 +222,7 @@ setFiles([]);
     setOriginalSize(0);
     setWorkerState({ type: 'idle' });
     setCurrentIndex(0);
+    setError(null);
   }, []);
 
   useEffect(() => {
@@ -353,6 +356,15 @@ setFiles([]);
                     <p className="mt-1 text-xs text-zinc-500">
                       First run downloads the AI model (~10MB). Subsequent runs are faster.
                     </p>
+                  </div>
+                )}
+
+                {error && (
+                  <div
+                    className="mb-6 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300"
+                    role="alert"
+                  >
+                    {error}
                   </div>
                 )}
 
