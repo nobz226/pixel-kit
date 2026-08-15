@@ -10,6 +10,7 @@ import {
   getOutputFilename,
   formatFileSize,
   drawCheckerboard,
+  compositeOnBackground,
 } from '@/lib/canvas-utils';
 import { PageBackground } from '@/components/background/BackgroundEffects';
 import { Button } from '@/components/ui/Button';
@@ -183,12 +184,13 @@ export default function RemoveBackgroundPage() {
     try {
       const response = await fetch(workerState.resultBlobUrl);
       const blob = await response.blob();
+      const flattened = await compositeOnBackground(blob, backgroundColor);
       const filename = getOutputFilename(files[currentIndex].name, 'png', 'no-bg');
-      downloadBlob(blob, filename);
+      downloadBlob(flattened, filename);
     } catch (err) {
       console.error('Download failed:', err);
     }
-  }, [workerState, files, currentIndex]);
+  }, [workerState, files, currentIndex, backgroundColor]);
 
   const handleEnterRetouch = useCallback(() => {
     if (workerState.type === 'done' && workerState.result) {

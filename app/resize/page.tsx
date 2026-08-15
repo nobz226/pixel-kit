@@ -12,8 +12,13 @@ import {
   formatFileSize,
   estimateFileSize,
 } from '@/lib/canvas-utils';
-import { calculateResizeDimensions } from '@/lib/tools/resize';
-import { ResizeOptions } from '@/lib/tools/types';
+import { calculateResizeDimensions, getFormatFromMimeType } from '@/lib/tools/resize';
+import {
+  checkAvifSupport,
+  checkWebpSupport,
+  OUTPUT_FORMATS,
+} from '@/lib/tools/convert';
+import { ResizeOptions, OutputFormatValue } from '@/lib/tools/types';
 import { PageBackground } from '@/components/background/BackgroundEffects';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -33,6 +38,8 @@ export default function ResizePage() {
   const [height, setHeight] = useState<number | ''>('');
   const [percentage, setPercentage] = useState<number | ''>(100);
   const [lockAspectRatio, setLockAspectRatio] = useState(true);
+  const [format, setFormat] = useState<OutputFormatValue>('png');
+  const [backgroundColor, setBackgroundColor] = useState('#ffffff');
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<
@@ -68,6 +75,7 @@ export default function ResizePage() {
           setHeight(bitmap.height);
           setPercentage(100);
           setOriginalDimensions({ width: bitmap.width, height: bitmap.height });
+          setFormat(getFormatFromMimeType(validFiles[i].type));
         }
       } catch (err) {
         setError(
@@ -103,18 +111,25 @@ export default function ResizePage() {
         options
       );
 
+      const { mimeType, supportsAlpha } = OUTPUT_FORMATS[format];
+
       const canvas = new OffscreenCanvas(targetWidth, targetHeight);
       const ctx = canvas.getContext('2d');
       if (!ctx) continue;
 
+      if (!supportsAlpha) {
+        ctx.fillStyle = backgroundColor;
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+      }
+
       ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
 
-      const blob = await canvas.convertToBlob({ type: 'image/png', quality: 0.92 });
+      const blob = await canvas.convertToBlob({ type: mimeType, quality: 0.92 });
       newPreviews.set(index, URL.createObjectURL(blob));
     }
 
     setPreviews(newPreviews);
-  }, [bitmaps, mode, width, height, percentage, lockAspectRatio]);
+  }, [bitmaps, mode, width, height, percentage, lockAspectRatio, format, backgroundColor]);
 
   const triggerPreviewUpdate = useCallback(() => {
     updatePreviews();
@@ -215,16 +230,23 @@ export default function ResizePage() {
           );
         }
 
+        const { mimeType, supportsAlpha, extension } = OUTPUT_FORMATS[format];
+
         const canvas = new OffscreenCanvas(targetWidth, targetHeight);
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Failed to create canvas');
 
+        if (!supportsAlpha) {
+          ctx.fillStyle = backgroundColor;
+          ctx.fillRect(0, 0, targetWidth, targetHeight);
+        }
+
         ctx.drawImage(bitmap, 0, 0, targetWidth, targetHeight);
 
-        const blob = await canvasToBlob(canvas, { mimeType: 'image/png', quality: 0.92 });
+        const blob = await canvasToBlob(canvas, { mimeType, quality: 0.92 });
         const filename = getOutputFilename(
           files[i].name,
-          'png',
+          extension,
           `resized-${targetWidth}x${targetHeight}`
         );
 
@@ -237,7 +259,7 @@ export default function ResizePage() {
     } finally {
       setProcessing(false);
     }
-  }, [files, bitmaps, mode, width, height, percentage, lockAspectRatio]);
+  }, [files, bitmaps, mode, width, height, percentage, lockAspectRatio, format, backgroundColor]);
 
   const handleDownload = useCallback((blob: Blob, filename: string) => {
     downloadBlob(blob, filename);
@@ -271,8 +293,12 @@ export default function ResizePage() {
   const originalSize = firstBitmap ? formatFileSize(files[0]?.size || 0) : null;
   const estimatedSize =
     firstBitmap && width && height
-      ? formatFileSize(estimateFileSize(width as number, height as number, 'image/png', 92))
+      ? formatFileSize(
+          estimateFileSize(width as number, height as number, OUTPUT_FORMATS[format].mimeType, 92)
+        )
       : null;
+  const avifSupported = checkAvifSupport();
+  const webpSupported = checkWebpSupport();
 
   return (
     <PageBackground variant="tool">
@@ -455,6 +481,76 @@ export default function ResizePage() {
                     Lock aspect ratio
                   </label>
                 </div>
+
+                <div className="mt-6">
+                  <label className="mb-2 block text-sm font-medium text-zinc-300">
+                    Output Format
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(
+                      [
+                        { value: 'jpeg', label: 'JPEG', supportsAlpha: false },
+                        { value: 'png', label: 'PNG', supportsAlpha: true },
+                        { value: 'webp', label: 'WebP', supportsAlpha: true },
+                        { value: 'avif', label: 'AVIF', supportsAlpha: true },
+                      ] as const
+                    ).map((fmt) => (
+                      <button
+                        key={fmt.value}
+                        type="button"
+                        onClick={() => setFormat(fmt.value)}
+                        disabled={
+                          (fmt.value === 'avif' && !avifSupported) ||
+                          (fmt.value === 'webp' && !webpSupported)
+                        }
+                        className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                          format === fmt.value
+                            ? 'border-primary/40 bg-primary/20 text-primary'
+                            : (fmt.value === 'avif' && !avifSupported) ||
+                                (fmt.value === 'webp' && !webpSupported)
+                              ? 'cursor-not-allowed border-white/5 bg-zinc-900 text-zinc-600'
+                              : 'border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10'
+                        }`}
+                      >
+                        {fmt.label}
+                        {(fmt.value === 'avif' && !avifSupported) ||
+                        (fmt.value === 'webp' && !webpSupported) ? (
+                          <span className="ml-1 text-xs text-red-400">(unsupported)</span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    Defaults to the original file&apos;s format. JPEG doesn&apos;t support
+                    transparency. AVIF/WebP require browser support.
+                  </p>
+                </div>
+
+                {format === 'jpeg' && (
+                  <div className="mt-4">
+                    <label className="mb-2 block text-sm font-medium text-zinc-300">
+                      Background Color (for transparency)
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={backgroundColor}
+                        onChange={(e) => setBackgroundColor(e.target.value)}
+                        className="h-10 w-10 cursor-pointer rounded-lg border border-white/10 bg-white/5"
+                      />
+                      <input
+                        type="text"
+                        value={backgroundColor}
+                        onChange={(e) =>
+                          /^#[0-9A-Fa-f]{6}$/.test(e.target.value) &&
+                          setBackgroundColor(e.target.value)
+                        }
+                        className="flex-1 rounded-lg border border-white/10 bg-zinc-950/50 px-3 py-2 text-white placeholder:text-zinc-500"
+                        placeholder="#ffffff"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {firstBitmap && (
                   <div className="mt-4 space-y-1.5 border-t border-white/5 pt-4 text-sm">

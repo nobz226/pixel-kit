@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/design-system/utils';
-import { drawCheckerboard, canvasToBlob } from '@/lib/canvas-utils';
+import { drawCheckerboard, canvasToBlob, compositeOnBackground } from '@/lib/canvas-utils';
 
 interface BrushRetouchProps {
   resultBitmap: ImageBitmap;
@@ -352,8 +352,9 @@ export function BrushRetouch({
     ctx.globalCompositeOperation = 'source-over';
 
     const blob = await canvasToBlob(offscreenCanvas, { mimeType: 'image/png', quality: 1 });
-    onApply(blob);
-  }, [width, height, resultBitmap, onApply]);
+    const flattened = await compositeOnBackground(blob, backgroundColor);
+    onApply(flattened);
+  }, [width, height, resultBitmap, onApply, backgroundColor]);
 
   const handleCancel = useCallback(() => {
     onCancel();

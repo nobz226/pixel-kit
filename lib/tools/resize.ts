@@ -1,5 +1,19 @@
-import { ImageTool, ResizeOptions } from './types';
+import { ImageTool, ResizeOptions, OutputFormatValue, OUTPUT_FORMATS } from './types';
 import { canvasToBlob } from '../canvas-utils';
+
+const DEFAULT_OUTPUT_FORMAT: Record<string, OutputFormatValue> = {
+  'image/jpeg': 'jpeg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/avif': 'avif',
+  'image/gif': 'png',
+  'image/bmp': 'png',
+  'image/tiff': 'png',
+};
+
+export function getFormatFromMimeType(mimeType: string): OutputFormatValue {
+  return DEFAULT_OUTPUT_FORMAT[mimeType] ?? 'png';
+}
 
 export const resizeTool: ImageTool = {
   name: 'resize',
@@ -13,7 +27,17 @@ export const resizeTool: ImageTool = {
     'image/tiff',
   ],
   async run(input: ImageBitmap, opts: ResizeOptions): Promise<Blob> {
-    const { width, height, percentage, lockAspectRatio = true, fit = 'fill' } = opts;
+    const {
+      width,
+      height,
+      percentage,
+      lockAspectRatio = true,
+      fit = 'fill',
+      format = 'png',
+      quality = 0.92,
+      backgroundColor = '#ffffff',
+    } = opts;
+    const { mimeType, supportsAlpha } = OUTPUT_FORMATS[format];
 
     let targetWidth: number;
     let targetHeight: number;
@@ -62,13 +86,18 @@ export const resizeTool: ImageTool = {
     if (!ctx) throw new Error('Failed to get canvas context');
 
     if (fit === 'cover' || fit === 'contain') {
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = backgroundColor;
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+    }
+
+    if (!supportsAlpha) {
+      ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, targetWidth, targetHeight);
     }
 
     ctx.drawImage(input, offsetX, offsetY, drawWidth, drawHeight);
 
-    return canvasToBlob(canvas, { mimeType: 'image/png', quality: 0.92 });
+    return canvasToBlob(canvas, { mimeType, quality });
   },
 };
 
@@ -121,8 +150,11 @@ export async function getResizePreviewUrl(
 
   const { width, height } = calculateResizeDimensions(input.width, input.height, options);
 
+  const format = options.format ?? 'png';
+  const { mimeType } = OUTPUT_FORMATS[format];
+
   ctx.drawImage(input, 0, 0, width, height);
 
-  const blob = await canvas.convertToBlob({ type: 'image/png', quality: 0.92 });
+  const blob = await canvas.convertToBlob({ type: mimeType, quality: options.quality ?? 0.92 });
   return URL.createObjectURL(blob);
 }

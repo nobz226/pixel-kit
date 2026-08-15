@@ -35,6 +35,26 @@ export async function canvasToBlob(
   });
 }
 
+export async function compositeOnBackground(
+  blob: Blob,
+  backgroundColor: string
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Failed to get canvas context');
+
+    ctx.fillStyle = backgroundColor;
+    ctx.fillRect(0, 0, bitmap.width, bitmap.height);
+    ctx.drawImage(bitmap, 0, 0);
+
+    return canvasToBlob(canvas, { mimeType: 'image/png', quality: 1 });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

@@ -14,6 +14,9 @@ export interface ResizeOptions extends ToolOptions {
   percentage?: number;
   lockAspectRatio?: boolean;
   fit?: 'cover' | 'contain' | 'fill';
+  format?: OutputFormatValue;
+  quality?: number;
+  backgroundColor?: string;
 }
 
 export interface CropOptions extends ToolOptions {
@@ -45,11 +48,14 @@ export const SUPPORTED_INPUT_TYPES = [
   'image/tiff',
 ] as const;
 
-export const OUTPUT_FORMATS = [
-  { value: 'jpeg', label: 'JPEG', mimeType: 'image/jpeg', extension: 'jpg', supportsAlpha: false },
-  { value: 'png', label: 'PNG', mimeType: 'image/png', extension: 'png', supportsAlpha: true },
-  { value: 'webp', label: 'WebP', mimeType: 'image/webp', extension: 'webp', supportsAlpha: true },
-  { value: 'avif', label: 'AVIF', mimeType: 'image/avif', extension: 'avif', supportsAlpha: true },
-] as const;
+export type OutputFormatValue = 'jpeg' | 'png' | 'webp' | 'avif';
 
-export type OutputFormatValue = (typeof OUTPUT_FORMATS)[number]['value'];
+export const OUTPUT_FORMATS: Record<
+  OutputFormatValue,
+  { label: string; mimeType: string; extension: string; supportsAlpha: boolean }
+> = {
+  jpeg: { label: 'JPEG', mimeType: 'image/jpeg', extension: 'jpg', supportsAlpha: false },
+  png: { label: 'PNG', mimeType: 'image/png', extension: 'png', supportsAlpha: true },
+  webp: { label: 'WebP', mimeType: 'image/webp', extension: 'webp', supportsAlpha: true },
+  avif: { label: 'AVIF', mimeType: 'image/avif', extension: 'avif', supportsAlpha: true },
+};
