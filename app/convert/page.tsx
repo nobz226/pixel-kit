@@ -157,7 +157,7 @@ export default function ConvertPage() {
             </Link>
             <Link
               href="/"
-              className="text-sm text-zinc-500 hover:text-zinc-300"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               ← All Tools
             </Link>

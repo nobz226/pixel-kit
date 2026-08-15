@@ -272,7 +272,7 @@ setFiles([]);
             </Link>
             <Link
               href="/"
-              className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               ← All Tools
             </Link>

@@ -271,12 +271,12 @@ export default function UpscalePage() {
       >
         <div className="mx-auto max-w-6xl">
           <header className="mb-8 flex items-center justify-between">
-            <Link href="/" className="text-2xl font-bold text-zinc-300">
+            <Link href="/" className="text-2xl font-bold text-white">
               PixelKit
             </Link>
             <Link
               href="/"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-300"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               ← All Tools
             </Link>

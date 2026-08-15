@@ -652,7 +652,7 @@ export default function CropPage() {
                           className="h-48 w-full bg-zinc-900/50 object-contain"
                         />
                         <div className="space-y-2 p-3">
-                          <p className="truncate text-sm font-medium text-white">
+                          <p className="truncate text-sm font-medium text-zinc-300">
                             {result.filename}
                           </p>
                           <p className="text-xs text-zinc-500">

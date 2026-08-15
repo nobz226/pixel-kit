@@ -315,7 +315,7 @@ export default function ResizePage() {
             </Link>
             <Link
               href="/"
-              className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               ← All Tools
             </Link>
@@ -619,7 +619,7 @@ export default function ResizePage() {
                           className="h-48 w-full bg-zinc-900/50 object-contain"
                         />
                         <div className="space-y-2 p-3">
-                          <p className="truncate text-sm font-medium text-white">
+                          <p className="truncate text-sm font-medium text-zinc-300">
                             {result.filename}
                           </p>
                           <p className="text-xs text-zinc-500">

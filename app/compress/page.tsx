@@ -150,15 +150,12 @@ export default function CompressPage() {
       >
         <div className="mx-auto max-w-6xl">
           <header className="mb-8 flex items-center justify-between">
-            <Link
-              href="/"
-              className="text-xl font-bold text-white transition-colors hover:text-primary"
-            >
+            <Link href="/" className="text-2xl font-bold text-white">
               PixelKit
             </Link>
             <Link
               href="/"
-              className="text-sm text-zinc-400 transition-colors hover:text-white"
+              className="text-sm text-zinc-400 transition-colors hover:text-zinc-200"
             >
               ← All Tools
             </Link>
